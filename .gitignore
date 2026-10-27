@@ -1,0 +1,55 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Środowisko
+.venv/
+venv/
+env/
+
+# Sekrety i zmienne środowiskowe
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Edytory
+.vscode/
+.idea/
+
+# Testy i narzędzia
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Logi i dane lokalne
+*.log
+data/logs/*
+data/memory/*
+data/database/*
+data/indexes/*
+memory/local/
+memory/chroma/
+memory/vector_db/
+
+# Bazy danych
+*.db
+*.sqlite
+*.sqlite3
+
+# Kopie zapasowe
+*.bak
+*.tmp
+*.old
+
+# System Windows
+Thumbs.db
+Desktop.ini
