@@ -1,0 +1,20 @@
+ agents/base.py              | 185 [32m++++++++++++++++++++++++++++++++++++++++++++[m
+ agents/planner.py           |  28 [32m+++++++[m
+ apps/cli/main.py            |  68 [32m++++++++++++++++[m
+ config/model_config.py      |  46 [32m+++++++++++[m
+ core/engine.py              | 128 [32m++++++++++++++++++++++++++++++[m
+ core/verifier.py            |  44 [32m+++++++++++[m
+ tests/test_tools.py         |  76 [32m++++++++++++++++++[m
+ tools/file_manager.py       |  59 [32m++++++++++++++[m
+ tools/test_runner.py        |  58 [32m++++++++++++++[m
+ tools/tool_executor.py      |  62 [32m+++++++++++++++[m
+ workspace/agent_test.txt    |   1 [32m+[m
+ workspace/cli_test.py       |   1 [32m+[m
+ workspace/engine_test.txt   |   1 [32m+[m
+ workspace/hello.txt         |   1 [32m+[m
+ workspace/list_tests.py     |   8 [32m++[m
+ workspace/repair_test.py    |   1 [32m+[m
+ workspace/security_test.txt |   1 [32m+[m
+ workspace/test.txt          |   1 [32m+[m
+ workspace/test_ok.py        |   1 [32m+[m
+ 19 files changed, 770 insertions(+)
