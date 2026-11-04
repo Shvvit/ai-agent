@@ -283,22 +283,6 @@ def chat(payload: ChatRequest) -> ChatResponse:
     message = payload.message.strip()
     if not message:
         raise HTTPException(422, "Wiadomość nie może być pusta.")
-    cfg = ModelConfig.from_env()
-    if payload.model:
-        if len(payload.model) > 128 or any(ch in payload.model for ch in "\\r\\n"):
-            raise HTTPException(422, "Nieprawidłowa nazwa modelu.")
-        cfg = ModelConfig(provider=cfg.provider, model=payload.model, host=cfg.host,
-                          temperature=cfg.temperature)
-    elif os.getenv("AI_AUTO_ROUTING", "1").strip().lower() not in {"0", "false", "no"}:
-        try:
-            tags = httpx.get(f"{cfg.host.rstrip('/')}/api/tags", timeout=1.5)
-            tags.raise_for_status()
-            registry = ModelRegistry.from_ollama_payload(tags.json())
-            choice = ModelRouter(registry, cfg.model).choose(message)
-            cfg = ModelConfig(provider=cfg.provider, model=choice.model, host=cfg.host,
-                              temperature=cfg.temperature)
-        except (httpx.HTTPError, ValueError):
-            pass  # Keep the configured default if Ollama is temporarily unavailable.
     conversation_id = payload.conversation_id or str(uuid.uuid4())
     with connect() as db:
         row = db.execute("SELECT id FROM conversations WHERE id=?", (conversation_id,)).fetchone()
@@ -343,6 +327,22 @@ def chat(payload: ChatRequest) -> ChatResponse:
             db.execute("UPDATE conversations SET updated_at=CURRENT_TIMESTAMP WHERE id=?", (conversation_id,))
         return ChatResponse(conversation_id=conversation_id, answer=command_answer, model="local-memory")
 
+    cfg = ModelConfig.from_env()
+    if payload.model:
+        if len(payload.model) > 128 or any(ch in payload.model for ch in "\\r\\n"):
+            raise HTTPException(422, "Nieprawidłowa nazwa modelu.")
+        cfg = ModelConfig(provider=cfg.provider, model=payload.model, host=cfg.host,
+                          temperature=cfg.temperature)
+    elif os.getenv("AI_AUTO_ROUTING", "1").strip().lower() not in {"0", "false", "no"}:
+        try:
+            tags = httpx.get(f"{cfg.host.rstrip('/')}/api/tags", timeout=1.5)
+            tags.raise_for_status()
+            registry = ModelRegistry.from_ollama_payload(tags.json())
+            choice = ModelRouter(registry, cfg.model).choose(message)
+            cfg = ModelConfig(provider=cfg.provider, model=choice.model, host=cfg.host,
+                              temperature=cfg.temperature)
+        except (httpx.HTTPError, ValueError):
+            pass  # Keep the configured default if Ollama is temporarily unavailable.
     try:
         workspace_files = FileManager(WORKSPACE)
         memory_items = MemoryManager(DB_PATH).search(message)
