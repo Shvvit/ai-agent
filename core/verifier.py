@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 from pathlib import Path, PureWindowsPath
 
 
@@ -13,7 +14,8 @@ class VerificationResult:
 class Verifier:
     """Weryfikuje pliki w workspace bez podążania za symlinkami."""
 
-    def __init__(self, workspace: str | Path = "workspace", max_file_bytes: int = 2_000_000) -> None:
+    def __init__(self, workspace: str | Path | None = None, max_file_bytes: int = 2_000_000) -> None:
+        workspace = workspace if workspace is not None else os.getenv("AI_WORKSPACE", "workspace")
         self.workspace = Path(workspace).resolve()
         self.max_file_bytes = max(1, int(max_file_bytes))
 
