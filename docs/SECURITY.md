@@ -9,6 +9,7 @@
 - Operacje plikowe są ograniczone do katalogu workspace; odrzucane są ścieżki absolutne, traversal i symlinki.
 - Wyszukiwanie plików ma limity rozmiaru pliku, całkowitego skanowania i liczby wyników.
 - Wyszukiwanie WWW jest wyłączone, dopóki nie podasz dostawcy i klucza API. Klucz przechowuj w zmiennej środowiskowej, nigdy w repozytorium.
+- Narzędzie terminala udostępnia wyłącznie ograniczoną allowlistę diagnostycznych komend read-only, uruchamianych bez powłoki. Nie wykonuje dowolnych poleceń ani operacji modyfikujących.
 - Uruchamianie Pythona przez `run_python` nie jest sandboxem. Proces działa z uprawnieniami konta użytkownika i może czytać lub modyfikować pliki poza workspace, korzystać z sieci i uruchamiać inne procesy. Uruchamiaj tylko kod, któremu ufasz.
 
 ## Modele i dane
