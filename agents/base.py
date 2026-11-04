@@ -283,31 +283,3 @@ class BaseAgent:
             "Zatrzymano zadanie po osiągnięciu limitu wywołań narzędzi. "
             "Sprawdź dotychczasowe wyniki przed ponowną próbą."
         )
-
-                            },
-                        }
-                        for call in response.tool_calls
-                    ],
-                }
-            )
-
-            for call in response.tool_calls:
-                name = call.name
-                arguments = call.arguments
-
-                try:
-                    if name == "delegate_task":
-                        result = self._delegate(arguments)
-                    else:
-                        result = self.tools.execute(name, arguments)
-                except Exception as exc:
-                    result = f"Błąd narzędzia: {type(exc).__name__}: {exc}"
-
-                messages.append(
-                    {"role": "tool", "tool_name": name, "content": result}
-                )
-
-        return (
-            "Zatrzymano zadanie po osiągnięciu limitu wywołań narzędzi. "
-            "Sprawdź dotychczasowe wyniki przed ponowną próbą."
-        )
