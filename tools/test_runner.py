@@ -3,7 +3,7 @@ from __future__ import annotations
 import subprocess
 import sys
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 
 @dataclass
@@ -14,6 +14,8 @@ class TestResult:
 
 
 class TestRunner:
+    __test__ = False  # Prevent pytest from treating this helper as a test class.
+
     """Uruchamia testy Pythona wyłącznie w katalogu workspace."""
 
     def __init__(self, workspace: str | Path = "workspace", timeout: int = 30) -> None:
@@ -22,10 +24,23 @@ class TestRunner:
         self.workspace.mkdir(parents=True, exist_ok=True)
 
     def run_python(self, relative_path: str) -> TestResult:
-        script = (self.workspace / relative_path).resolve()
+        if not isinstance(relative_path, str) or not relative_path.strip():
+            raise ValueError("Ścieżka do skryptu nie może być pusta.")
+        windows_path = PureWindowsPath(relative_path)
+        if Path(relative_path).is_absolute() or windows_path.is_absolute() or windows_path.drive:
+            raise PermissionError("Nie wolno uruchamiać plików spoza workspace.")
+        relative = Path(relative_path.replace("\\", "/"))
+        if ".." in relative.parts:
+            raise PermissionError("Nie wolno uruchamiać plików spoza workspace.")
+        script = (self.workspace / relative).resolve()
         if not script.is_relative_to(self.workspace):
             raise PermissionError("Nie wolno uruchamiać plików spoza workspace.")
-        if not script.is_file() or script.suffix != ".py":
+        current = self.workspace
+        for part in relative.parts:
+            current = current / part
+            if current.is_symlink():
+                raise PermissionError("Nie wolno uruchamiać plików przez dowiązania symboliczne.")
+        if not script.is_file() or script.suffix.lower() != ".py":
             raise ValueError("Podaj istniejący plik .py w workspace.")
         try:
             result = subprocess.run(
