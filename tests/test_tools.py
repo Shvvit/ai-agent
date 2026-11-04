@@ -74,3 +74,31 @@ def test_tool_executor_writes_file(tmp_path):
     result = executor.execute("write_file", {"path": "created.txt", "content": "OK"})
     assert "Zapisano plik" in result
     assert files.read_file("created.txt") == "OK"
+
+
+def test_list_and_search_workspace_files(tmp_path):
+    files = FileManager(tmp_path / "workspace")
+    files.write_file("src/main.py", "print('agent')\\n# TODO improve")
+    files.write_file("README.md", "Własne AI")
+    assert files.list_files() == ["README.md", "src/main.py"]
+    assert files.search_files("todo") == ["src/main.py:2: # TODO improve"]
+
+
+def test_file_size_limit_is_enforced(tmp_path):
+    files = FileManager(tmp_path / "workspace", max_file_bytes=8)
+    with pytest.raises(ValueError, match="przekracza limit"):
+        files.write_file("large.txt", "123456789")
+
+
+def test_symlink_escape_is_blocked(tmp_path):
+    files = FileManager(tmp_path / "workspace")
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "secret.txt").write_text("secret", encoding="utf-8")
+    link = files.workspace / "escape"
+    try:
+        link.symlink_to(outside, target_is_directory=True)
+    except OSError:
+        pytest.skip("Symlinks unavailable for current user/system")
+    with pytest.raises(PermissionError):
+        files.read_file("escape/secret.txt")
