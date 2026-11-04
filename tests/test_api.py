@@ -295,3 +295,18 @@ def test_chat_automatically_routes_coding_task(monkeypatch, tmp_path):
         assert response.status_code == 200
         assert response.json()["model"] == "qwen2.5-coder:7b"
         assert captured["model"] == "qwen2.5-coder:7b"
+
+
+def test_capabilities_endpoint_reports_real_limits(monkeypatch, tmp_path):
+    module = importlib.import_module("api.app")
+    monkeypatch.setenv("AI_WORKSPACE", str(tmp_path / "workspace"))
+    with TestClient(module.app) as client:
+        response = client.get("/api/capabilities")
+        assert response.status_code == 200
+        data = response.json()
+        assert "run_command" in data["tools"]
+        assert data["memory"]["vector"] is False
+        assert data["tasks"]["background_workers"] is False
+        assert data["tasks"]["interrupt_running"] is False
+        assert data["sandbox"]["os_isolation"] is False
+        assert data["remote_access"] is False
