@@ -193,3 +193,20 @@ def test_brave_search_uses_token_header(monkeypatch):
     result = WebSearchClient(provider="brave", api_key="brave-secret").search("query")
     assert captured["headers"]["X-Subscription-Token"] == "brave-secret"
     assert result[0]["snippet"] == "Snippet"
+
+
+def test_tool_executor_routes_allowlisted_terminal_command():
+    class FakeResult:
+        success = True
+        return_code = 0
+        output = "NAME ID SIZE"
+
+    class FakeTerminal:
+        def run(self, command):
+            assert command == "ollama list"
+            return FakeResult()
+
+    executor = ToolExecutor(terminal=FakeTerminal())
+    result = executor.execute("run_command", {"command": "ollama list"})
+    assert "NAME ID SIZE" in result
+    assert "SUCCESS: True" in result
