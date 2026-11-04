@@ -352,11 +352,13 @@ def chat(payload: ChatRequest) -> ChatResponse:
             db.execute("UPDATE conversations SET updated_at=CURRENT_TIMESTAMP WHERE id=?", (conversation_id,))
         return ChatResponse(conversation_id=conversation_id, answer=command_answer, model="local-memory")
 
-    cfg = ModelConfig.from_env()
+    cfg = load_model_config()
     if payload.model:
-        if len(payload.model) > 128 or any(ch in payload.model for ch in "\\r\\n"):
+        requested_model = payload.model.strip()
+        if (not requested_model or len(requested_model) > 128
+                or any(ch.isspace() for ch in requested_model)):
             raise HTTPException(422, "Nieprawidłowa nazwa modelu.")
-        cfg = ModelConfig(provider=cfg.provider, model=payload.model, host=cfg.host,
+        cfg = ModelConfig(provider=cfg.provider, model=requested_model, host=cfg.host,
                           temperature=cfg.temperature)
     elif os.getenv("AI_AUTO_ROUTING", "1").strip().lower() not in {"0", "false", "no"}:
         try:
