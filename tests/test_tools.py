@@ -159,3 +159,37 @@ def test_tool_executor_routes_web_search():
     output = executor.execute("web_search", {"query": "Ollama documentation"})
     assert "https://ollama.com" in output
     assert "Official docs" in output
+
+
+def test_web_search_environment_limits_are_bounded(monkeypatch):
+    monkeypatch.setenv("AI_WEB_SEARCH_PROVIDER", "brave")
+    monkeypatch.setenv("AI_WEB_SEARCH_API_KEY", "test")
+    monkeypatch.setenv("AI_WEB_SEARCH_TIMEOUT", "999")
+    monkeypatch.setenv("AI_WEB_SEARCH_MAX_RESULTS", "999")
+    client = WebSearchClient.from_env()
+    assert client.timeout == 60.0
+    assert client.max_results == 10
+
+
+def test_brave_search_uses_token_header(monkeypatch):
+    import tools.web_search as module
+
+    captured = {}
+
+    class FakeResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"web": {"results": [
+                {"title": "Search", "url": "https://example.org", "description": "Snippet"}
+            ]}}
+
+    def fake_get(url, **kwargs):
+        captured.update(kwargs)
+        return FakeResponse()
+
+    monkeypatch.setattr(module.httpx, "get", fake_get)
+    result = WebSearchClient(provider="brave", api_key="brave-secret").search("query")
+    assert captured["headers"]["X-Subscription-Token"] == "brave-secret"
+    assert result[0]["snippet"] == "Snippet"
