@@ -37,3 +37,11 @@ def test_router_uses_smallest_available_when_default_is_missing():
     ]})
     choice = ModelRouter(registry, "missing", {}).choose("Hello")
     assert choice.model == "small"
+
+
+
+def test_registry_rejects_non_object_payload():
+    import pytest
+
+    with pytest.raises(ValueError):
+        ModelRegistry.from_ollama_payload([])
