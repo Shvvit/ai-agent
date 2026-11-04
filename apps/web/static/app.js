@@ -252,7 +252,7 @@ $("taskForm").addEventListener("submit", async (event) => {
 });
 
 async function diagnostics() {
-  const [health, modelData] = await Promise.allSettled([api("/api/health"), api("/api/models")]);
+  const [health, modelData, capabilityData] = await Promise.allSettled([api("/api/health"), api("/api/models"), api("/api/capabilities")]);
   const online = health.status === "fulfilled" && health.value.ollama === "online";
   $("statusDot").className = "status-dot " + (online ? "online" : "offline");
   $("statusText").textContent = online ? "Ollama połączona" : "Ollama niedostępna";
@@ -269,6 +269,12 @@ async function diagnostics() {
     models.forEach((model) => $("modelSelect").add(new Option(model.name, model.name)));
     rows.push(["Dostępne modele", models.map(m => m.name).join(", ") || "brak"]);
   } else rows.push(["Modele", "nie można pobrać listy"]);
+  if (capabilityData.status === "fulfilled") {
+    rows.push(["Narzędzia", capabilityData.value.tools.join(", ")]);
+    rows.push(["Pamięć", capabilityData.value.memory.retrieval]);
+    rows.push(["Sandbox", capabilityData.value.sandbox.os_isolation ? "izolacja OS" : "brak izolacji OS"]);
+    rows.push(["Zdalny dostęp", capabilityData.value.remote_access ? "włączony" : "wyłączony"]);
+  } else rows.push(["Funkcje", "nie można pobrać listy"]);
   const diagnostics = $("diagnostics");
   diagnostics.replaceChildren();
   rows.forEach(([label, value]) => {
