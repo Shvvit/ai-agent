@@ -109,6 +109,23 @@ def test_openai_compatible_adapter_normalizes_tool_calls(monkeypatch):
     assert captured["headers"]["Authorization"] == "Bearer secret"
 
 
+@pytest.mark.parametrize("base_url", [
+    "ftp://api.example.test/v1",
+    "https://user:password@api.example.test/v1",
+    "https://api.example.test/v1?token=secret",
+    "https://api.example.test/v1#fragment",
+    "https://api.example.test:invalid/v1",
+    "https://api.example.test/v1 with-space",
+])
+def test_openai_compatible_adapter_rejects_unsafe_or_invalid_base_url(base_url):
+    with pytest.raises(ValueError):
+        OpenAICompatibleModel(
+            model="test-model",
+            base_url=base_url,
+            api_key="secret",
+        )
+
+
 def test_openai_compatible_adapter_rejects_tool_response_without_call_id():
     model = OpenAICompatibleModel(model="test-model", api_key="secret")
     with pytest.raises(ValueError, match="tool_call_id"):
