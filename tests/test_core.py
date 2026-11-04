@@ -56,3 +56,29 @@ def test_failed_tasks_capture_error(tmp_path):
     failed = manager.fail(task.id, "Ollama offline")
     assert failed.status is TaskStatus.FAILED
     assert failed.error == "Ollama offline"
+
+
+from core.engine import AgentEngine
+from core.verifier import Verifier
+
+
+def test_engine_reports_unverifiable_task_separately(tmp_path):
+    class FakeAgent:
+        def run(self, prompt):
+            return "Plan" if "Przygotuj plan" in prompt else "Odpowiedź"
+
+    outcome = AgentEngine(agent=FakeAgent(), verifier=Verifier(tmp_path)).run("Wyjaśnij pojęcie")
+    assert outcome.success is True
+    assert outcome.verified is False
+    assert "nie ma automatycznego kryterium" in outcome.verification
+
+
+def test_engine_does_not_claim_missing_file_was_created(tmp_path):
+    class FakeAgent:
+        def run(self, prompt):
+            return "Plan" if "Przygotuj plan" in prompt else "Plik gotowy"
+
+    outcome = AgentEngine(agent=FakeAgent(), verifier=Verifier(tmp_path)).run("Utwórz plik wynik.txt")
+    assert outcome.success is False
+    assert outcome.verified is False
+    assert "Nie znaleziono pliku" in outcome.verification
