@@ -57,6 +57,7 @@ class OllamaModel:
                 ModelToolCall(
                     name=str(call.function.name),
                     arguments=arguments,
+                    call_id=getattr(call, "id", None),
                 )
             )
         return ModelResponse(
@@ -254,6 +255,35 @@ class BaseAgent:
                             "function": {
                                 "name": call.name,
                                 "arguments": call.arguments,
+                            },
+                            **({"id": call.call_id} if call.call_id else {}),
+                        }
+                        for call in response.tool_calls
+                    ],
+                }
+            )
+
+            for call in response.tool_calls:
+                name = call.name
+                arguments = call.arguments
+                try:
+                    if name == "delegate_task":
+                        result = self._delegate(arguments)
+                    else:
+                        result = self.tools.execute(name, arguments)
+                except Exception as exc:
+                    result = f"Błąd narzędzia: {type(exc).__name__}: {exc}"
+
+                tool_message = {"role": "tool", "content": result, "tool_name": name}
+                if call.call_id:
+                    tool_message["tool_call_id"] = call.call_id
+                messages.append(tool_message)
+
+        return (
+            "Zatrzymano zadanie po osiągnięciu limitu wywołań narzędzi. "
+            "Sprawdź dotychczasowe wyniki przed ponowną próbą."
+        )
+
                             },
                         }
                         for call in response.tool_calls
