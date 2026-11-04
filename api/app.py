@@ -3,8 +3,9 @@ from __future__ import annotations
 import os
 import sqlite3
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 import httpx
 from fastapi import FastAPI, HTTPException
@@ -30,12 +31,20 @@ app = FastAPI(title="Własne AI", version="0.2.0", description="Lokalny agent AI
 app.mount("/static", StaticFiles(directory=str(WEB_DIR), check_dir=False), name="static")
 
 
-def connect() -> sqlite3.Connection:
-    db = sqlite3.connect(DB_PATH)
+@contextmanager
+def connect() -> Iterator[sqlite3.Connection]:
+    db = sqlite3.connect(DB_PATH, timeout=10)
     db.row_factory = sqlite3.Row
-    db.execute("PRAGMA foreign_keys=ON")
-    db.execute("PRAGMA journal_mode=WAL")
-    return db
+    try:
+        db.execute("PRAGMA foreign_keys=ON")
+        db.execute("PRAGMA journal_mode=WAL")
+        yield db
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
 
 def init_db() -> None:
