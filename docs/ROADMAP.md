@@ -21,7 +21,7 @@
 - zaawansowany koordynator multi-agent: praca równoległa, współdzielony stan zadań, osobne modele/limity i niezależne potwierdzanie wyników,
 - benchmark modeli lokalnych, dobór na podstawie rzeczywistych testów i routing wielu dostawców,
 - pełna przeglądarka i ekstrakcja treści stron z kontrolą zgód (samo wyszukiwanie WWW jest dostępne opcjonalnie),
-- terminal z allowlistą komend i potwierdzeniami,
+- terminal z komendami modyfikującymi i approval workflow (read-only allowlista diagnostyczna już działa),
 - obsługa obrazów/audio/wideo,
 - streaming odpowiedzi i przerywanie aktywnych zadań (anulowanie oczekujących zadań już działa),
 - izolowany sandbox OS (AppContainer/seccomp/kontenery),
@@ -33,4 +33,7 @@ Funkcje planowane nie są dostępne. Uruchamianie kodu Python nie jest pełną i
 ## Zaimplementowane pozycje
 - [x] Trwała kolejka zadań SQLite z kontrolą stanów pending/running/completed/failed/cancelled.
 - [x] API i panel WWW do tworzenia, przeglądania, uruchamiania oraz anulowania zadań oczekujących.
+- [x] Regułowy routing profili modeli Ollama z testami i fallbackiem.
+- [x] Opcjonalne wyszukiwanie WWW Tavily/Brave.
+- [x] Ograniczony terminal diagnostyczny read-only z allowlistą i testami.
 - [ ] Asynchroniczne worker-y, wznowienie po restarcie, retry policy i prawdziwe przerywanie aktywnych zadań.
