@@ -125,6 +125,24 @@ def health() -> dict[str, Any]:
             "workspace": str(WORKSPACE), "version": app.version}
 
 
+@app.get("/api/capabilities")
+def capabilities() -> dict[str, Any]:
+    tools = ["read_file", "write_file", "list_files", "search_files",
+             "run_python", "run_command", "delegate_task"]
+    if ToolExecutor().web_search_available:
+        tools.append("web_search")
+    return {
+        "provider": "ollama",
+        "tools": tools,
+        "memory": {"persistent": True, "retrieval": "lexical", "vector": False},
+        "tasks": {"persistent": True, "background_workers": False,
+                  "cancel_pending": True, "interrupt_running": False},
+        "terminal": {"mode": "read_only_allowlist", "shell": False},
+        "sandbox": {"os_isolation": False},
+        "remote_access": False,
+    }
+
+
 @app.get("/api/models")
 def models() -> dict[str, Any]:
     cfg = ModelConfig.from_env()
