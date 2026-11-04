@@ -248,8 +248,8 @@ def execute_task(task_id: str) -> dict[str, Any]:
         raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc
-    cfg = ModelConfig.from_env()
     try:
+        cfg = ModelConfig.from_env()
         agent = BaseAgent(
             model=OllamaModel(config=cfg),
             tools=ToolExecutor(file_manager=FileManager(WORKSPACE)),
