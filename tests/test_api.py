@@ -215,20 +215,22 @@ def test_task_execution_persists_agent_result(monkeypatch, tmp_path):
 
     class FakeAgent:
         def __init__(self, **kwargs):
-            pass
+            self.calls = 0
 
         def run(self, task):
-            assert task == "Utwórz plik test.txt"
-            return "Plik został utworzony i sprawdzony."
+            self.calls += 1
+            return "1. Przeanalizuj wymagania" if self.calls == 1 else "Wyjaśnienie wykonane."
 
     monkeypatch.setattr(module, "BaseAgent", FakeAgent)
     with TestClient(module.app) as client:
-        created = client.post("/api/tasks", json={"description": "Utwórz plik test.txt"})
+        created = client.post("/api/tasks", json={"description": "Wyjaśnij, jak działa pamięć agenta"})
         task_id = created.json()["task"]["id"]
         executed = client.post(f"/api/tasks/{task_id}/execute")
         assert executed.status_code == 200
         assert executed.json()["task"]["status"] == "completed"
-        assert executed.json()["task"]["result"] == "Plik został utworzony i sprawdzony."
+        assert "Wyjaśnienie wykonane." in executed.json()["task"]["result"]
+        assert executed.json()["success"] is True
+        assert executed.json()["verified"] is False
         assert client.post(f"/api/tasks/{task_id}/execute").status_code == 409
 
 
