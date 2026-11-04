@@ -54,7 +54,7 @@ def test_chat_uses_agent_and_persists_messages(monkeypatch, tmp_path):
     monkeypatch.setattr(module, "BaseAgent", FakeAgent)
     with TestClient(module.app) as client:
         response = client.post("/api/chat", json={"message": "Cześć"})
-        assert response.status_code == 200
+        assert response.status_code == 200, response.text
         data = response.json()
         assert data["answer"] == "Witaj!"
         messages = client.get(f"/api/conversations/{data['conversation_id']}/messages").json()["messages"]
