@@ -162,7 +162,7 @@ class BaseAgent:
         return specialist.run(task.strip())
 
     def run(self, task: str) -> str:
-        """Wykonuje zadanie, obsługując wywołania narzędzi przez Ollama."""
+        """Wykonuje zadanie przez adapter dostawcy i obsługuje wywołania narzędzi."""
 
         task = task.strip()
         if not task:
