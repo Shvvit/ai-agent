@@ -102,18 +102,26 @@ async function diagnostics() {
   $("statusText").textContent = online ? "Ollama połączona" : "Ollama niedostępna";
   const rows = [];
   if (health.status === "fulfilled") {
-    rows.push("<b>API:</b> " + health.value.status);
-    rows.push("<b>Ollama:</b> " + health.value.ollama);
-    rows.push("<b>Domyślny model:</b> " + health.value.model);
-    rows.push("<b>Workspace:</b> " + health.value.workspace);
-  } else rows.push("<b>API:</b> brak odpowiedzi");
+    rows.push(["API", health.value.status]);
+    rows.push(["Ollama", health.value.ollama]);
+    rows.push(["Domyślny model", health.value.model]);
+    rows.push(["Workspace", health.value.workspace]);
+  } else rows.push(["API", "brak odpowiedzi"]);
   if (modelData.status === "fulfilled") {
     const models = modelData.value.models;
     $("modelSelect").replaceChildren(new Option("Domyślny model", ""));
     models.forEach((model) => $("modelSelect").add(new Option(model.name, model.name)));
-    rows.push("<b>Dostępne modele:</b> " + (models.map(m => m.name).join(", ") || "brak"));
-  } else rows.push("<b>Modele:</b> nie można pobrać listy");
-  $("diagnostics").innerHTML = rows.join("<br>");
+    rows.push(["Dostępne modele", models.map(m => m.name).join(", ") || "brak"]);
+  } else rows.push(["Modele", "nie można pobrać listy"]);
+  const diagnostics = $("diagnostics");
+  diagnostics.replaceChildren();
+  rows.forEach(([label, value]) => {
+    const line = document.createElement("div");
+    const strong = document.createElement("strong");
+    strong.textContent = label + ": ";
+    line.append(strong, document.createTextNode(String(value)));
+    diagnostics.append(line);
+  });
   $("modelChip").textContent = health.status === "fulfilled" ? health.value.model : "Ollama";
 }
 
