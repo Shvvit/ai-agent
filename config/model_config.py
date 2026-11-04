@@ -31,8 +31,10 @@ class ModelConfig:
         parsed_host = urlsplit(host)
         if parsed_host.scheme not in {"http", "https"} or not parsed_host.hostname:
             raise ValueError("AI_HOST musi być poprawnym adresem HTTP lub HTTPS.")
-        if parsed_host.username or parsed_host.password or parsed_host.query or parsed_host.fragment:
-            raise ValueError("AI_HOST nie może zawierać danych logowania, query ani fragmentu.")
+        if (parsed_host.username or parsed_host.password or parsed_host.query
+                or parsed_host.fragment or parsed_host.path not in {"", "/"}
+                or any(ch.isspace() for ch in host)):
+            raise ValueError("AI_HOST nie może zawierać ścieżki, danych logowania, query ani białych znaków.")
         try:
             temperature = float(raw_temperature)
         except ValueError as exc:
