@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from agents.base import BaseAgent
+from models.providers import ModelResponse
 
 
 class FakeModel:
@@ -12,6 +13,10 @@ class FakeModel:
     def generate(self, messages):
         self.calls.append(messages)
         return "Specjalista zakończył analizę."
+
+    def chat(self, messages, tools=None):
+        self.calls.append(messages)
+        return ModelResponse(content="Specjalista zakończył analizę.")
 
 
 def test_delegation_is_exposed_only_when_enabled():
