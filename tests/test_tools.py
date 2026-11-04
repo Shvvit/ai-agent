@@ -144,3 +144,18 @@ def test_tavily_search_normalizes_results(monkeypatch):
     assert results == [{
         "title": "Docs", "url": "https://example.com/docs", "snippet": "Useful docs"
     }]
+
+
+def test_tool_executor_routes_web_search():
+    class FakeSearch:
+        enabled = True
+
+        def search(self, query):
+            assert query == "Ollama documentation"
+            return [{"title": "Ollama", "url": "https://ollama.com", "snippet": "Official docs"}]
+
+    executor = ToolExecutor(web_search=FakeSearch())
+    assert executor.web_search_available
+    output = executor.execute("web_search", {"query": "Ollama documentation"})
+    assert "https://ollama.com" in output
+    assert "Official docs" in output
