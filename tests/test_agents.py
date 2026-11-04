@@ -106,3 +106,54 @@ def test_web_search_tool_is_only_advertised_when_configured():
     agent = BaseAgent(model=FakeModel(), tools=ToolExecutor(web_search=Search()))
     names = {item["function"]["name"] for item in agent._tool_definitions()}
     assert "web_search" in names
+
+
+
+def test_provider_neutral_agent_preserves_tool_call_id():
+    from models.providers import ModelResponse, ModelToolCall
+
+    class ToolModel:
+        provider_name = "test"
+        name = "test-model"
+
+        def __init__(self):
+            self.calls = []
+
+        @property
+        def capabilities(self):
+            from models.providers import ModelCapabilities
+            return ModelCapabilities(tool_calling=True)
+
+        def generate(self, messages):
+            return "done"
+
+        def chat(self, messages, tools=None):
+            self.calls.append(messages)
+            if len(self.calls) == 1:
+                return ModelResponse(
+                    tool_calls=(
+                        ModelToolCall(
+                            name="inspect",
+                            arguments={"target": "sample"},
+                            call_id="call_test_1",
+                        ),
+                    )
+                )
+            return ModelResponse(content="Zrobione.")
+
+    class ToolExecutor:
+        web_search_available = False
+
+        def execute(self, name, arguments):
+            assert name == "inspect"
+            assert arguments == {"target": "sample"}
+            return "Wynik narzędzia."
+
+    model = ToolModel()
+    agent = BaseAgent(model=model, tools=ToolExecutor())
+    assert agent.run("Sprawdź próbkę.") == "Zrobione."
+    follow_up = model.calls[1]
+    assert follow_up[-2]["role"] == "assistant"
+    assert follow_up[-2]["tool_calls"][0]["id"] == "call_test_1"
+    assert follow_up[-1]["role"] == "tool"
+    assert follow_up[-1]["tool_call_id"] == "call_test_1"
