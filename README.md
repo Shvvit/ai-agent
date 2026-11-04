@@ -49,6 +49,7 @@ Otwórz http://127.0.0.1:8000. Szczegóły: [docs/INSTALLATION.md](docs/INSTALLA
 | `AI_MODEL_CODE` | — | Opcjonalny model do zadań programistycznych |
 | `AI_MODEL_REASONING` | — | Opcjonalny model do analizy i planowania |
 | `AI_MODEL_FAST` | — | Opcjonalny model do krótkich i szybkich zadań |
+| `AI_AUTO_ROUTING` | `1` | Automatyczny wybór profilu modelu w czacie (`0` wyłącza) |
 | `AI_WORKSPACE` | `./workspace` | Katalog plików agenta |
 | `AI_DATA_DIR` | `./data` | Lokalna baza i dane |
 | `AI_PORT` | `8000` | Port interfejsu |
