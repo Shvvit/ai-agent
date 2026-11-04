@@ -192,6 +192,37 @@ def chat(payload: ChatRequest) -> ChatResponse:
         rows = db.execute("SELECT role, content FROM messages WHERE conversation_id=? ORDER BY id",
                           (conversation_id,)).fetchall()
     history = [{"role": row["role"], "content": row["content"]} for row in rows]
+
+    memory = MemoryManager(DB_PATH)
+    command_answer: str | None = None
+    if message == "/memory":
+        items = memory.list_memories()
+        command_answer = "\\n".join(
+            f"{item['id']}. {item['content']}" for item in items
+        ) or "Pamięć jest pusta."
+    elif message == "/clear_memory":
+        removed = memory.clear()
+        command_answer = f"Wyczyszczono pamięć. Usunięto wpisów: {removed}."
+    elif message.startswith("/remember"):
+        content = message[len("/remember"):].strip()
+        if not content:
+            command_answer = "Użycie: /remember treść do zapamiętania"
+        else:
+            try:
+                item = memory.remember(content)
+                command_answer = f"Zapamiętano (wpis #{item['id']}): {item['content']}"
+            except (TypeError, ValueError) as exc:
+                command_answer = f"Nie zapisano pamięci: {exc}"
+
+    if command_answer is not None:
+        with connect() as db:
+            db.execute("INSERT INTO messages(conversation_id, role, content) VALUES (?, 'user', ?)",
+                       (conversation_id, message))
+            db.execute("INSERT INTO messages(conversation_id, role, content) VALUES (?, 'assistant', ?)",
+                       (conversation_id, command_answer))
+            db.execute("UPDATE conversations SET updated_at=CURRENT_TIMESTAMP WHERE id=?", (conversation_id,))
+        return ChatResponse(conversation_id=conversation_id, answer=command_answer, model="local-memory")
+
     try:
         workspace_files = FileManager(WORKSPACE)
         memory_items = MemoryManager(DB_PATH).search(message)
