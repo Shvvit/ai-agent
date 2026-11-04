@@ -128,6 +128,14 @@ async function refreshMemory() {
   }
 }
 
+$("clearMemory").addEventListener("click", async () => {
+  if (!window.confirm("Usunąć wszystkie zapisane informacje?")) return;
+  try {
+    await api("/api/memory", {method: "DELETE"});
+    await refreshMemory();
+  } catch (error) { alert(error.message); }
+});
+
 $("memoryForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const input = $("memoryInput");
