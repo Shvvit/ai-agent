@@ -69,11 +69,19 @@ class FileManager:
     def search_files(self, query: str, relative_path: str = ".", limit: int = 50) -> list[str]:
         if not isinstance(query, str) or not query:
             raise ValueError("Fraza wyszukiwania nie może być pusta.")
+        if len(query) > 1000:
+            raise ValueError("Fraza wyszukiwania może mieć maksymalnie 1000 znaków.")
         matches: list[str] = []
+        scanned_bytes = 0
+        max_scan_bytes = 20_000_000
         for name in self.list_files(relative_path, limit=1000):
             path = self._safe_path(name)
-            if path.stat().st_size > self.max_file_bytes:
+            file_size = path.stat().st_size
+            if file_size > self.max_file_bytes:
                 continue
+            if scanned_bytes + file_size > max_scan_bytes:
+                break
+            scanned_bytes += file_size
             try:
                 content = path.read_text(encoding="utf-8")
             except (UnicodeDecodeError, OSError):
