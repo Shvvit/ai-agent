@@ -32,7 +32,7 @@ class ModelConfig:
                 f"Nieobsługiwany provider: {provider}. "
                 "Dostępne: ollama, openai_compatible."
             )
-        if not model or len(model) > 256 or any(ch in model for "\\r\\n"):
+        if not model or len(model) > 256 or any(ch in model for ch in "\r\n"):
             raise ValueError("AI_MODEL musi mieć od 1 do 256 znaków i nie może zawierać nowych linii.")
 
         parsed_host = urlsplit(host)
