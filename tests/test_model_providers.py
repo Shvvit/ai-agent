@@ -39,6 +39,7 @@ def test_factory_creates_openai_compatible_adapter():
     assert provider.provider_name == "openai_compatible"
     assert provider.name == "example-model"
     assert "test-secret" not in repr(config)
+    assert "test-secret" not in repr(provider)
 
 
 def test_openai_compatible_adapter_normalizes_tool_calls(monkeypatch):
