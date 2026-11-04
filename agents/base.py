@@ -41,9 +41,23 @@ class OllamaModel:
         tools: list[dict[str, Any]] | None = None,
     ) -> ModelResponse:
         client = ollama.Client(host=self.config.host)
+        provider_messages: list[dict[str, Any]] = []
+        for message in messages:
+            item = dict(message)
+            if item.get("role") == "tool":
+                item.pop("tool_call_id", None)
+            if item.get("role") == "assistant" and item.get("tool_calls"):
+                item["tool_calls"] = [
+                    {
+                        "type": "function",
+                        "function": call.get("function", {}),
+                    }
+                    for call in item["tool_calls"]
+                ]
+            provider_messages.append(item)
         response = client.chat(
             model=self.config.model,
-            messages=messages,
+            messages=provider_messages,
             tools=tools or [],
             options={"temperature": self.config.temperature},
         )
