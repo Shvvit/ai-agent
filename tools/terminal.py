@@ -18,8 +18,9 @@ class CommandResult:
 class TerminalRunner:
     """Uruchamia ograniczony zestaw komend diagnostycznych bez powłoki."""
 
-    def __init__(self, workspace: str | Path = ".", timeout: int = 15,
+    def __init__(self, workspace: str | Path | None = None, timeout: int = 15,
                  max_output_chars: int = 12000) -> None:
+        workspace = workspace if workspace is not None else os.getenv("AI_WORKSPACE", ".")
         self.workspace = Path(workspace).resolve()
         self.workspace.mkdir(parents=True, exist_ok=True)
         self.timeout = max(1, min(int(timeout), 30))
