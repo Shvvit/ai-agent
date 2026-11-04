@@ -86,9 +86,23 @@ class OpenAICompatibleModel:
         messages: list[dict],
         tools: list[dict] | None = None,
     ) -> ModelResponse:
+        normalized_messages: list[dict] = []
+        for message in messages:
+            item = dict(message)
+            if item.get("role") == "tool":
+                call_id = item.get("tool_call_id")
+                if not call_id:
+                    raise ValueError("Odpowiedź narzędzia nie zawiera tool_call_id.")
+                item = {
+                    "role": "tool",
+                    "tool_call_id": call_id,
+                    "content": item.get("content", ""),
+                }
+            normalized_messages.append(item)
+
         payload = {
             "model": self.model,
-            "messages": messages,
+            "messages": normalized_messages,
             "temperature": self.temperature,
         }
         if tools:
@@ -145,6 +159,6 @@ class OpenAICompatibleModel:
                 raise RuntimeError(
                     f"Argumenty narzędzia {name} nie są obiektem JSON."
                 )
-            calls.append(ModelToolCall(name=name, arguments=arguments))
+            calls.append(ModelToolCall(name=name, arguments=arguments, call_id=item.get("id")))
 
         return ModelResponse(content=content, tool_calls=tuple(calls))
