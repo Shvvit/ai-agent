@@ -145,20 +145,20 @@ def capabilities() -> dict[str, Any]:
 
 @app.get("/api/models")
 def models() -> dict[str, Any]:
-    cfg = ModelConfig.from_env()
+    cfg = load_model_config()
     try:
         response = httpx.get(f"{cfg.host.rstrip('/')}/api/tags", timeout=5.0)
         response.raise_for_status()
-        items = response.json().get("models", [])
-        return {"models": [{"name": item.get("name", ""), "size": item.get("size", 0),
-                            "modified_at": item.get("modified_at")} for item in items]}
+        registry = ModelRegistry.from_ollama_payload(response.json())
+        return {"models": [{"name": item.name, "size": item.size_bytes,
+                            "modified_at": item.modified_at} for item in registry.list()]}
     except (httpx.HTTPError, ValueError) as exc:
         raise HTTPException(503, f"Nie można pobrać modeli z Ollama: {exc}") from exc
 
 
 @app.get("/api/models/recommend")
 def recommend_model(task: str = "general") -> dict[str, str]:
-    cfg = ModelConfig.from_env()
+    cfg = load_model_config()
     try:
         response = httpx.get(f"{cfg.host.rstrip('/')}/api/tags", timeout=5.0)
         response.raise_for_status()
@@ -274,7 +274,7 @@ def execute_task(task_id: str) -> dict[str, Any]:
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc
     try:
-        cfg = ModelConfig.from_env()
+        cfg = load_model_config()
         agent = BaseAgent(
             model=OllamaModel(config=cfg),
             tools=ToolExecutor(file_manager=FileManager(WORKSPACE)),
