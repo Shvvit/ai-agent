@@ -171,6 +171,86 @@ $("memoryForm").addEventListener("submit", async (event) => {
   } catch (error) { alert(error.message); }
 });
 
+async function refreshTasks() {
+  const list = $("taskList");
+  if (!list) return;
+  try {
+    const data = await api("/api/tasks?limit=100");
+    list.replaceChildren();
+    if (!data.tasks.length) {
+      list.textContent = "Brak zapisanych zadań.";
+      return;
+    }
+    data.tasks.forEach((task) => {
+      const row = document.createElement("div");
+      row.className = "task-item";
+      const details = document.createElement("div");
+      details.className = "task-details";
+      const title = document.createElement("strong");
+      title.textContent = task.title;
+      const status = document.createElement("small");
+      status.textContent = task.status;
+      const description = document.createElement("p");
+      description.textContent = task.description;
+      details.append(title, status, description);
+      row.append(details);
+      if (task.status === "pending") {
+        const run = document.createElement("button");
+        run.type = "button";
+        run.textContent = "Uruchom";
+        run.addEventListener("click", async () => {
+          run.disabled = true;
+          run.textContent = "Pracuje…";
+          try {
+            await api("/api/tasks/" + encodeURIComponent(task.id) + "/execute", {method: "POST"});
+          } catch (error) {
+            alert("Nie udało się wykonać zadania: " + error.message);
+          } finally {
+            await refreshTasks();
+          }
+        });
+        const cancel = document.createElement("button");
+        cancel.type = "button";
+        cancel.className = "task-cancel";
+        cancel.textContent = "Anuluj";
+        cancel.addEventListener("click", async () => {
+          try {
+            await api("/api/tasks/" + encodeURIComponent(task.id) + "/cancel", {method: "POST"});
+            await refreshTasks();
+          } catch (error) { alert(error.message); }
+        });
+        row.append(run, cancel);
+      } else if (task.result || task.error) {
+        const output = document.createElement("p");
+        output.className = "task-output";
+        output.textContent = task.error || task.result;
+        details.append(output);
+      }
+      list.append(row);
+    });
+  } catch (error) {
+    list.textContent = "Nie można pobrać zadań: " + error.message;
+  }
+}
+
+$("taskForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const input = $("taskInput");
+  const description = input.value.trim();
+  if (!description) return;
+  const submit = event.submitter;
+  if (submit) submit.disabled = true;
+  try {
+    await api("/api/tasks", {method: "POST", body: JSON.stringify({description})});
+    input.value = "";
+    await refreshTasks();
+  } catch (error) {
+    alert("Nie udało się zapisać zadania: " + error.message);
+  } finally {
+    if (submit) submit.disabled = false;
+  }
+});
+
 async function diagnostics() {
   const [health, modelData] = await Promise.allSettled([api("/api/health"), api("/api/models")]);
   const online = health.status === "fulfilled" && health.value.ollama === "online";
@@ -222,7 +302,7 @@ $("promptInput").addEventListener("input", (event) => {
 });
 $("newChat").addEventListener("click", newChat);
 $("menuButton").addEventListener("click", () => $("sidebar").classList.toggle("open"));
-$("settingsButton").addEventListener("click", () => { $("settingsDialog").showModal(); diagnostics(); refreshMemory(); });
+$("settingsButton").addEventListener("click", () => { $("settingsDialog").showModal(); diagnostics(); refreshMemory(); refreshTasks(); });
 $("closeSettings").addEventListener("click", () => $("settingsDialog").close());
 document.querySelectorAll(".suggestion").forEach(button => button.addEventListener("click", () => {
   $("promptInput").value = button.dataset.prompt;
