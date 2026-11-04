@@ -72,6 +72,13 @@ def startup() -> None:
     init_db()
 
 
+def load_model_config() -> ModelConfig:
+    try:
+        return ModelConfig.from_env()
+    except ValueError as exc:
+        raise HTTPException(422, f"Nieprawidłowa konfiguracja modelu: {exc}") from exc
+
+
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=20000)
     conversation_id: str | None = None
@@ -107,7 +114,7 @@ def home() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict[str, Any]:
-    cfg = ModelConfig.from_env()
+    cfg = load_model_config()
     try:
         response = httpx.get(f"{cfg.host.rstrip('/')}/api/tags", timeout=3.0)
         response.raise_for_status()
