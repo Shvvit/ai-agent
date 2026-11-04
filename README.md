@@ -3,7 +3,7 @@
 Lokalny agent AI dla Windows 10/11 i Linux, oparty obecnie na Ollama. Domyślny model to `qwen3:8b`; można wybrać dowolny model obecny w lokalnej bibliotece Ollama.
 
 ## Co działa
-- polski interfejs webowy z historią rozmów,
+- polski interfejs webowy z historią rozmów, wyborem modelu i usuwaniem rozmów z poziomu panelu,
 - lokalna baza SQLite,
 - adapter Ollama i obsługa wywołań narzędzi,
 - podstawowe delegowanie do agentów specjalistycznych (planista, analityk, programista, recenzent) z limitem zagnieżdżenia,
