@@ -78,7 +78,7 @@ def test_tool_executor_writes_file(tmp_path):
 
 def test_list_and_search_workspace_files(tmp_path):
     files = FileManager(tmp_path / "workspace")
-    files.write_file("src/main.py", "print('agent')\\n# TODO improve")
+    files.write_file("src/main.py", "print('agent')\n# TODO improve")
     files.write_file("README.md", "Własne AI")
     assert files.list_files() == ["README.md", "src/main.py"]
     assert files.search_files("todo") == ["src/main.py:2: # TODO improve"]
