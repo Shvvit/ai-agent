@@ -253,7 +253,7 @@ def chat(payload: ChatRequest) -> ChatResponse:
         default_prompt = ("Jesteś agentem Własne AI. Odpowiadasz po polsku. "
                           "Realizujesz zadania za pomocą dostępnych narzędzi, gdy jest to "
                           "możliwe. Po wykonaniu działania sprawdzasz jego wynik. "
-                          "Nie twierdź, że wykonałeś coś, czego nie zrobiłeś.")
+                          "Nie twierdź, że wykonałeś coś, czego nie zrobiłeś. Przy złożonych zadaniach możesz delegować analizę, planowanie, implementację lub recenzję do agenta specjalistycznego.")
         agent = BaseAgent(model=OllamaModel(config=cfg), history=history,
                           tools=ToolExecutor(file_manager=workspace_files),
                           system_prompt=default_prompt + memory_context)
