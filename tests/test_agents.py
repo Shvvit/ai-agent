@@ -157,3 +157,46 @@ def test_provider_neutral_agent_preserves_tool_call_id():
     assert follow_up[-2]["tool_calls"][0]["id"] == "call_test_1"
     assert follow_up[-1]["role"] == "tool"
     assert follow_up[-1]["tool_call_id"] == "call_test_1"
+
+
+def test_agent_enforces_total_tool_call_limit_within_one_response():
+    from models.providers import ModelToolCall
+
+    class MultiCallModel:
+        def __init__(self):
+            self.calls = []
+
+        def chat(self, messages, tools=None):
+            self.calls.append(messages)
+            if len(self.calls) == 1:
+                return ModelResponse(
+                    tool_calls=(
+                        ModelToolCall(name="first", arguments={}, call_id="call_1"),
+                        ModelToolCall(name="second", arguments={}, call_id="call_2"),
+                    )
+                )
+            return ModelResponse(content="Zatrzymano po limicie.")
+
+    class CountingTools:
+        web_search_available = False
+
+        def __init__(self):
+            self.executed = []
+
+        def execute(self, name, arguments):
+            self.executed.append(name)
+            return f"Wykonano: {name}"
+
+    model = MultiCallModel()
+    tools = CountingTools()
+    agent = BaseAgent(model=model, tools=tools, max_tool_calls=1)
+
+    assert agent.run("Wykonaj dwa działania.") == "Zatrzymano po limicie."
+    assert tools.executed == ["first"]
+
+    tool_results = [
+        message for message in model.calls[1] if message.get("role") == "tool"
+    ]
+    assert len(tool_results) == 2
+    assert "osiągnięto limit" in tool_results[1]["content"]
+
