@@ -8,6 +8,7 @@ Lokalny agent AI dla Windows 10/11 i Linux, oparty obecnie na Ollama. Domyślny 
 - trwała kolejka zadań: zapisywanie, podgląd statusu, wykonywanie i anulowanie zadań oczekujących,
 - adapter Ollama i obsługa wywołań narzędzi,
 - rejestr modeli Ollama i prosty router profili (kodowanie/analityka/szybkie zadania) z kontrolowanym fallbackiem,
+- ograniczone narzędzie terminala tylko do komend diagnostycznych read-only (bez dowolnego shell),
 - opcjonalne wyszukiwanie WWW przez API Tavily lub Brave, dostępne jako narzędzie agenta po skonfigurowaniu klucza,
 - podstawowe delegowanie do agentów specjalistycznych (planista, analityk, programista, recenzent) z limitem zagnieżdżenia,
 - odczyt i zapis plików w ograniczonym katalogu workspace,
