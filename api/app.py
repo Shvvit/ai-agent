@@ -18,6 +18,8 @@ from config.model_config import ModelConfig
 from tools.file_manager import FileManager
 from tools.tool_executor import ToolExecutor
 from memory.manager import MemoryManager
+from core.task_manager import TaskManager
+from core.task_state import TaskStatus
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = Path(os.getenv("AI_DATA_DIR", ROOT / "data")).resolve()
@@ -84,6 +86,11 @@ class ConversationCreate(BaseModel):
 
 class MemoryCreate(BaseModel):
     content: str = Field(min_length=1, max_length=4000)
+
+
+class TaskCreate(BaseModel):
+    description: str = Field(min_length=1, max_length=20000)
+    title: str | None = Field(default=None, max_length=120)
 
 
 @app.get("/")
@@ -179,6 +186,71 @@ def delete_conversation(conversation_id: str) -> dict[str, bool]:
         if cursor.rowcount == 0:
             raise HTTPException(404, "Nie znaleziono rozmowy.")
     return {"deleted": True}
+
+
+@app.get("/api/tasks")
+def list_tasks(status: TaskStatus | None = None, limit: int = 100) -> dict[str, Any]:
+    tasks = TaskManager(DB_PATH).list(status=status, limit=limit)
+    return {"tasks": [task.__dict__ | {"status": task.status.value} for task in tasks]}
+
+
+@app.post("/api/tasks")
+def create_task(payload: TaskCreate) -> dict[str, Any]:
+    try:
+        task = TaskManager(DB_PATH).create(payload.description, payload.title)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    return {"task": task.__dict__ | {"status": task.status.value}}
+
+
+@app.get("/api/tasks/{task_id}")
+def get_task(task_id: str) -> dict[str, Any]:
+    task = TaskManager(DB_PATH).get(task_id)
+    if task is None:
+        raise HTTPException(404, "Nie znaleziono zadania.")
+    return {"task": task.__dict__ | {"status": task.status.value}}
+
+
+@app.post("/api/tasks/{task_id}/cancel")
+def cancel_task(task_id: str) -> dict[str, Any]:
+    try:
+        task = TaskManager(DB_PATH).cancel(task_id)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return {"task": task.__dict__ | {"status": task.status.value}}
+
+
+@app.post("/api/tasks/{task_id}/execute")
+def execute_task(task_id: str) -> dict[str, Any]:
+    manager = TaskManager(DB_PATH)
+    try:
+        task = manager.start(task_id)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    cfg = ModelConfig.from_env()
+    try:
+        agent = BaseAgent(
+            model=OllamaModel(config=cfg),
+            tools=ToolExecutor(file_manager=FileManager(WORKSPACE)),
+            system_prompt=(
+                "Jesteś agentem wykonawczym Własne AI. Wykonaj zapisane zadanie "
+                "w workspace, używając narzędzi tylko wtedy, gdy są potrzebne. "
+                "Sprawdź rezultat i uczciwie opisz ograniczenia. Odpowiadaj po polsku."
+            ),
+        )
+        answer = agent.run(task.description)
+        finished = manager.complete(task_id, answer or "Model zwrócił pustą odpowiedź.")
+    except Exception as exc:
+        try:
+            manager.fail(task_id, f"{type(exc).__name__}: {exc}")
+        except (KeyError, ValueError):
+            pass
+        raise HTTPException(503, f"Nie udało się wykonać zadania: {type(exc).__name__}: {exc}") from exc
+    return {"task": finished.__dict__ | {"status": finished.status.value}, "model": cfg.model}
 
 
 @app.post("/api/chat", response_model=ChatResponse)
