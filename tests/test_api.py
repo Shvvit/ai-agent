@@ -117,16 +117,19 @@ def test_memory_slash_commands(monkeypatch, tmp_path):
         saved = client.post("/api/chat", json={"message": "/remember I use Qwen locally"})
         assert saved.status_code == 200
         assert "Zapamiętano" in saved.json()["answer"]
+        saved_second = client.post("/api/chat", json={"message": "/remember I prefer concise answers"})
+        assert saved_second.status_code == 200
 
         listed = client.post("/api/chat", json={"message": "/memory"})
         assert listed.status_code == 200
         assert "I use Qwen locally" in listed.json()["answer"]
+        assert "I prefer concise answers" in listed.json()["answer"]
         assert "\\n" not in listed.json()["answer"]
         assert "\n" in listed.json()["answer"]
 
         cleared = client.post("/api/chat", json={"message": "/clear_memory"})
         assert cleared.status_code == 200
-        assert "Usunięto wpisów: 1" in cleared.json()["answer"]
+        assert "Usunięto wpisów: 2" in cleared.json()["answer"]
 
         empty = client.post("/api/chat", json={"message": "/memory"})
         assert empty.status_code == 200
