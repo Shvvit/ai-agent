@@ -187,3 +187,50 @@ def test_chat_bounds_history_for_small_context_models(monkeypatch, tmp_path):
         assert response.status_code == 200
         assert len(captured["history"]) == 8
         assert all(len(item["content"]) <= 1200 for item in captured["history"])
+
+
+def test_task_api_lifecycle(monkeypatch, tmp_path):
+    module = importlib.import_module("api.app")
+    monkeypatch.setattr(module, "DB_PATH", tmp_path / "agent.sqlite3")
+    with TestClient(module.app) as client:
+        created = client.post("/api/tasks", json={"title": "Test", "description": "Sprawdź zadanie"})
+        assert created.status_code == 200
+        task_id = created.json()["task"]["id"]
+        assert created.json()["task"]["status"] == "pending"
+        assert client.get("/api/tasks").json()["tasks"][0]["id"] == task_id
+        assert client.get(f"/api/tasks/{task_id}").status_code == 200
+        cancelled = client.post(f"/api/tasks/{task_id}/cancel")
+        assert cancelled.status_code == 200
+        assert cancelled.json()["task"]["status"] == "cancelled"
+        assert client.post(f"/api/tasks/{task_id}/cancel").status_code == 409
+
+
+def test_task_execution_persists_agent_result(monkeypatch, tmp_path):
+    module = importlib.import_module("api.app")
+    monkeypatch.setattr(module, "DB_PATH", tmp_path / "agent.sqlite3")
+    monkeypatch.setattr(module, "WORKSPACE", tmp_path / "workspace")
+
+    class FakeAgent:
+        def __init__(self, **kwargs):
+            pass
+
+        def run(self, task):
+            assert task == "Utwórz plik test.txt"
+            return "Plik został utworzony i sprawdzony."
+
+    monkeypatch.setattr(module, "BaseAgent", FakeAgent)
+    with TestClient(module.app) as client:
+        created = client.post("/api/tasks", json={"description": "Utwórz plik test.txt"})
+        task_id = created.json()["task"]["id"]
+        executed = client.post(f"/api/tasks/{task_id}/execute")
+        assert executed.status_code == 200
+        assert executed.json()["task"]["status"] == "completed"
+        assert executed.json()["task"]["result"] == "Plik został utworzony i sprawdzony."
+        assert client.post(f"/api/tasks/{task_id}/execute").status_code == 409
+
+
+def test_task_api_validates_description(monkeypatch, tmp_path):
+    module = importlib.import_module("api.app")
+    monkeypatch.setattr(module, "DB_PATH", tmp_path / "agent.sqlite3")
+    with TestClient(module.app) as client:
+        assert client.post("/api/tasks", json={"description": " "}).status_code == 422
