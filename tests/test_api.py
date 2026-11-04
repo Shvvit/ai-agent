@@ -66,3 +66,26 @@ def test_chat_rejects_empty_message():
     with TestClient(module.app) as client:
         response = client.post("/api/chat", json={"message": "   "})
         assert response.status_code == 422
+
+
+def test_memory_api_lifecycle(monkeypatch, tmp_path):
+    module = importlib.import_module("api.app")
+    monkeypatch.setattr(module, "DB_PATH", tmp_path / "agent.sqlite3")
+    with TestClient(module.app) as client:
+        created = client.post("/api/memory", json={"content": "Używam lokalnego modelu Qwen."})
+        assert created.status_code == 200
+        memory_id = created.json()["memory"]["id"]
+        listed = client.get("/api/memory")
+        assert listed.status_code == 200
+        assert listed.json()["memories"][0]["content"] == "Używam lokalnego modelu Qwen."
+        deleted = client.delete(f"/api/memory/{memory_id}")
+        assert deleted.status_code == 200
+        assert client.get("/api/memory").json()["memories"] == []
+
+
+def test_memory_api_rejects_empty_content(monkeypatch, tmp_path):
+    module = importlib.import_module("api.app")
+    monkeypatch.setattr(module, "DB_PATH", tmp_path / "agent.sqlite3")
+    with TestClient(module.app) as client:
+        response = client.post("/api/memory", json={"content": "  "})
+        assert response.status_code == 422
