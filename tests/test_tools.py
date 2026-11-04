@@ -102,3 +102,9 @@ def test_symlink_escape_is_blocked(tmp_path):
         pytest.skip("Symlinks unavailable for current user/system")
     with pytest.raises(PermissionError):
         files.read_file("escape/secret.txt")
+
+
+def test_search_rejects_unbounded_query(tmp_path):
+    files = FileManager(tmp_path / "workspace")
+    with pytest.raises(ValueError, match="maksymalnie 1000"):
+        files.search_files("x" * 1001)
