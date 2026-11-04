@@ -89,6 +89,22 @@ class BaseAgent:
             {
                 "type": "function",
                 "function": {
+                    "name": "list_files",
+                    "description": "Wyświetla pliki w workspace.",
+                    "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": []},
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "search_files",
+                    "description": "Wyszukuje tekst w plikach workspace.",
+                    "parameters": {"type": "object", "properties": {"query": {"type": "string"}, "path": {"type": "string"}}, "required": ["query"]},
+                },
+            },
+            {
+                "type": "function",
+                "function": {
                     "name": "run_python",
                     "description": (
                         "Uruchamia plik Python z workspace i zwraca "
