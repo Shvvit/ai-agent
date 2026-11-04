@@ -63,3 +63,14 @@ Serwer domyślnie nasłuchuje tylko na localhost. Nie wystawiaj go do sieci bez 
 ## Czego jeszcze nie ma
 
 To nie jest jeszcze odpowiednik pełnego komercyjnego agenta. Pamięć semantyczna, multi-agent, routing/benchmark modeli, integracje API chmurowych, przeglądarka i wyszukiwanie WWW, multimodalność, streaming/anulowanie, terminal z zatwierdzaniem komend, sandbox OS i bezpieczny dostęp zdalny są wymienione jako kolejne etapy. Zobacz [docs/ROADMAP.md](docs/ROADMAP.md).
+
+
+## Pamięć agenta
+
+W ustawieniach interfejsu można dodawać, przeglądać i usuwać zapisane informacje. API pamięci:
+- `GET /api/memory` — lista wpisów,
+- `POST /api/memory` z JSON `{"content":"..." }` — zapamiętanie informacji,
+- `DELETE /api/memory/{id}` — usunięcie wpisu,
+- `DELETE /api/memory` — wyczyszczenie pamięci.
+
+Pamięć jest lokalna (SQLite), ograniczona do 2000 ostatnich wpisów i przeszukiwana leksykalnie. To nie jest jeszcze pamięć wektorowa ani automatyczne profilowanie użytkownika.
