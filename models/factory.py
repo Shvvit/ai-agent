@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from agents.base import OllamaModel
 from config.model_config import ModelConfig
-from models.providers import ModelProvider, OpenAICompatibleModel
+from models.providers import ModelProvider, OllamaModel, OpenAICompatibleModel
 
 
 def create_model_provider(config: ModelConfig) -> ModelProvider:
