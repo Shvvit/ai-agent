@@ -125,6 +125,11 @@ def create_memory(payload: MemoryCreate) -> dict[str, Any]:
     return {"memory": item}
 
 
+@app.delete("/api/memory")
+def clear_memory() -> dict[str, int]:
+    return {"deleted": MemoryManager(DB_PATH).clear()}
+
+
 @app.delete("/api/memory/{memory_id}")
 def delete_memory(memory_id: int) -> dict[str, bool]:
     if not MemoryManager(DB_PATH).forget(memory_id):
