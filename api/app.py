@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 
 from agents.base import BaseAgent, OllamaModel
 from config.model_config import ModelConfig
+from tools.file_manager import FileManager
 from tools.tool_executor import ToolExecutor
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -161,7 +162,9 @@ def chat(payload: ChatRequest) -> ChatResponse:
                           (conversation_id,)).fetchall()
     history = [{"role": row["role"], "content": row["content"]} for row in rows]
     try:
-        agent = BaseAgent(model=OllamaModel(config=cfg), history=history, tools=ToolExecutor())
+        workspace_files = FileManager(WORKSPACE)
+        agent = BaseAgent(model=OllamaModel(config=cfg), history=history,
+                          tools=ToolExecutor(file_manager=workspace_files))
         answer = agent.run(message)
     except Exception as exc:
         raise HTTPException(503, f"Agent nie mógł wykonać wiadomości: {type(exc).__name__}: {exc}") from exc
