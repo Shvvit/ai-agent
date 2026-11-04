@@ -203,7 +203,7 @@ def chat(payload: ChatRequest) -> ChatResponse:
     elif message == "/clear_memory":
         removed = memory.clear()
         command_answer = f"Wyczyszczono pamięć. Usunięto wpisów: {removed}."
-    elif message.startswith("/remember"):
+    elif message == "/remember" or message.startswith("/remember "):
         content = message[len("/remember"):].strip()
         if not content:
             command_answer = "Użycie: /remember treść do zapamiętania"
