@@ -89,3 +89,16 @@ def test_memory_api_rejects_empty_content(monkeypatch, tmp_path):
     with TestClient(module.app) as client:
         response = client.post("/api/memory", json={"content": "  "})
         assert response.status_code == 422
+
+
+
+def test_memory_api_clear_all(monkeypatch, tmp_path):
+    module = importlib.import_module("api.app")
+    monkeypatch.setattr(module, "DB_PATH", tmp_path / "agent.sqlite3")
+    with TestClient(module.app) as client:
+        for content in ("first fact", "second fact"):
+            assert client.post("/api/memory", json={"content": content}).status_code == 200
+        cleared = client.delete("/api/memory")
+        assert cleared.status_code == 200
+        assert cleared.json()["deleted"] == 2
+        assert client.get("/api/memory").json()["memories"] == []
