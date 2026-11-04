@@ -25,3 +25,9 @@
 - audyt, uwierzytelnianie i bezpieczny tryb zdalny.
 
 Funkcje planowane nie są dostępne. Uruchamianie kodu Python nie jest pełną izolacją bezpieczeństwa.
+
+
+## Zaimplementowane pozycje
+- [x] Trwała kolejka zadań SQLite z kontrolą stanów pending/running/completed/failed/cancelled.
+- [x] API i panel WWW do tworzenia, przeglądania, uruchamiania oraz anulowania zadań oczekujących.
+- [ ] Asynchroniczne worker-y, wznowienie po restarcie, retry policy i prawdziwe przerywanie aktywnych zadań.
