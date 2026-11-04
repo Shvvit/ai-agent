@@ -214,7 +214,7 @@ def test_tool_executor_routes_allowlisted_terminal_command():
 
 def test_test_runner_bounds_captured_output(tmp_path):
     runner = TestRunner(workspace=tmp_path / "workspace", max_output_bytes=1024)
-    (runner.workspace / "large.py").write_text("print('x' * 5000)", encoding="utf-8")
+    (runner.workspace / "large.py").write_text("print('x' * 2000)", encoding="utf-8")
     result = runner.run_python("large.py")
     assert result.success
     assert "Wynik skrócony do limitu" in result.output
