@@ -110,10 +110,6 @@ def test_search_rejects_unbounded_query(tmp_path):
         files.search_files("x" * 1001)
 
 
-from __future__ import annotations
-
-import pytest
-
 from tools.web_search import WebSearchClient, WebSearchError
 
 
