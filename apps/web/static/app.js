@@ -36,12 +36,35 @@ async function refreshConversations() {
     const data = await api("/api/conversations");
     $("conversationList").replaceChildren();
     data.conversations.forEach((conversation) => {
+      const row = document.createElement("div");
+      row.className = "conversation-row";
       const button = document.createElement("button");
+      button.type = "button";
       button.className = "conversation" + (conversation.id === currentConversation ? " active" : "");
       button.textContent = conversation.title;
       button.title = conversation.title;
       button.addEventListener("click", () => openConversation(conversation.id));
-      $("conversationList").append(button);
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "conversation-delete";
+      remove.textContent = "×";
+      remove.title = "Usuń rozmowę";
+      remove.setAttribute("aria-label", "Usuń rozmowę: " + conversation.title);
+      remove.addEventListener("click", async (event) => {
+        event.stopPropagation();
+        if (!window.confirm("Usunąć tę rozmowę wraz z całą historią?")) return;
+        remove.disabled = true;
+        try {
+          await api("/api/conversations/" + encodeURIComponent(conversation.id), {method: "DELETE"});
+          if (currentConversation === conversation.id) await newChat();
+          else await refreshConversations();
+        } catch (error) {
+          remove.disabled = false;
+          alert("Nie udało się usunąć rozmowy: " + error.message);
+        }
+      });
+      row.append(button, remove);
+      $("conversationList").append(row);
     });
   } catch (error) { console.error(error); }
 }
