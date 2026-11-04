@@ -4,14 +4,21 @@ import json
 
 from tools.file_manager import FileManager
 from tools.test_runner import TestRunner
+from tools.web_search import WebSearchClient
 
 
 class ToolExecutor:
     """Wykonuje jawnie dozwolone narzędzia agenta."""
 
-    def __init__(self, file_manager: FileManager | None = None, test_runner: TestRunner | None = None) -> None:
+    def __init__(self, file_manager: FileManager | None = None, test_runner: TestRunner | None = None,
+                 web_search: WebSearchClient | None = None) -> None:
         self.files = file_manager or FileManager()
         self.tests = test_runner or TestRunner(workspace=self.files.workspace)
+        self.web = web_search or WebSearchClient.from_env()
+
+    @property
+    def web_search_available(self) -> bool:
+        return self.web.enabled
 
     def execute(self, name: str, arguments: dict) -> str:
         if not isinstance(arguments, dict):
@@ -36,6 +43,17 @@ class ToolExecutor:
             if not isinstance(query, str) or not isinstance(path, str):
                 raise ValueError("search_files wymaga query i opcjonalnego path.")
             return "\n".join(self.files.search_files(query, path)) or "(brak wyników)"
+        if name == "web_search":
+            query = arguments.get("query")
+            if not isinstance(query, str):
+                raise ValueError("web_search wymaga pola query.")
+            results = self.web.search(query)
+            if not results:
+                return "(brak wyników)"
+            return "\\n".join(
+                f"{index}. {item['title']}\\nURL: {item['url']}\\n{item['snippet']}"
+                for index, item in enumerate(results, start=1)
+            )
         if name == "run_python":
             path = arguments.get("path")
             if not isinstance(path, str):
