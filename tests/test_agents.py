@@ -87,3 +87,17 @@ def test_ollama_agent_executes_specialist_delegation(monkeypatch):
         tool["function"]["name"] != "delegate_task"
         for tool in calls[1]["tools"]
     )
+
+
+def test_web_search_tool_is_only_advertised_when_configured():
+    class Search:
+        enabled = True
+
+        def search(self, query):
+            return []
+
+    from tools.tool_executor import ToolExecutor
+
+    agent = BaseAgent(model=FakeModel(), tools=ToolExecutor(web_search=Search()))
+    names = {item["function"]["name"] for item in agent._tool_definitions()}
+    assert "web_search" in names
