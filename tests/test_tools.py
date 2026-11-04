@@ -108,3 +108,43 @@ def test_search_rejects_unbounded_query(tmp_path):
     files = FileManager(tmp_path / "workspace")
     with pytest.raises(ValueError, match="maksymalnie 1000"):
         files.search_files("x" * 1001)
+
+
+from __future__ import annotations
+
+import pytest
+
+from tools.web_search import WebSearchClient, WebSearchError
+
+
+def test_web_search_requires_explicit_provider_and_key():
+    client = WebSearchClient()
+    assert client.enabled is False
+    with pytest.raises(WebSearchError):
+        client.search("local AI agent")
+
+
+def test_web_search_validates_query():
+    client = WebSearchClient(provider="tavily", api_key="test")
+    with pytest.raises(ValueError):
+        client.search(" ")
+
+
+def test_tavily_search_normalizes_results(monkeypatch):
+    import tools.web_search as module
+
+    class FakeResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"results": [
+                {"title": "Docs", "url": "https://example.com/docs", "content": "Useful docs"},
+                {"title": "Bad", "url": "javascript:alert(1)", "content": "not a link"},
+            ]}
+
+    monkeypatch.setattr(module.httpx, "post", lambda *args, **kwargs: FakeResponse())
+    results = WebSearchClient(provider="tavily", api_key="secret").search("agent framework")
+    assert results == [{
+        "title": "Docs", "url": "https://example.com/docs", "snippet": "Useful docs"
+    }]
