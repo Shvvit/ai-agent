@@ -234,3 +234,25 @@ def test_task_api_validates_description(monkeypatch, tmp_path):
     monkeypatch.setattr(module, "DB_PATH", tmp_path / "agent.sqlite3")
     with TestClient(module.app) as client:
         assert client.post("/api/tasks", json={"description": " "}).status_code == 422
+
+
+def test_model_recommendation_endpoint(monkeypatch):
+    module = importlib.import_module("api.app")
+
+    class FakeResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"models": [
+                {"name": "qwen3:8b", "size": 8},
+                {"name": "qwen2.5-coder:7b", "size": 7},
+            ]}
+
+    monkeypatch.setattr(module.httpx, "get", lambda *args, **kwargs: FakeResponse())
+    monkeypatch.setenv("AI_MODEL_CODE", "qwen2.5-coder:7b")
+    with TestClient(module.app) as client:
+        response = client.get("/api/models/recommend", params={"task": "Napisz program w Pythonie"})
+        assert response.status_code == 200
+        assert response.json()["model"] == "qwen2.5-coder:7b"
+        assert response.json()["profile"] == "coding"
