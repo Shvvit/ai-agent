@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import tempfile
@@ -20,8 +21,9 @@ class TestRunner:
 
     """Uruchamia skrypty Python w workspace z timeoutem i limitem przechwyconego wyjścia."""
 
-    def __init__(self, workspace: str | Path = "workspace", timeout: int = 30,
+    def __init__(self, workspace: str | Path | None = None, timeout: int = 30,
                  max_output_bytes: int = 1_000_000) -> None:
+        workspace = workspace if workspace is not None else os.getenv("AI_WORKSPACE", "workspace")
         self.workspace = Path(workspace).resolve()
         self.timeout = max(1, min(int(timeout), 300))
         self.max_output_bytes = max(1024, min(int(max_output_bytes), 5_000_000))
