@@ -7,13 +7,15 @@ from tools.test_runner import TestRunner
 
 
 class ToolExecutor:
-    """Wykonuje dozwolone narzędzia agenta."""
+    """Wykonuje jawnie dozwolone narzędzia agenta."""
 
     def __init__(self, file_manager: FileManager | None = None, test_runner: TestRunner | None = None) -> None:
         self.files = file_manager or FileManager()
         self.tests = test_runner or TestRunner(workspace=self.files.workspace)
 
     def execute(self, name: str, arguments: dict) -> str:
+        if not isinstance(arguments, dict):
+            raise ValueError("Argumenty narzędzia muszą być obiektem.")
         if name == "write_file":
             path, content = arguments.get("path"), arguments.get("content")
             if not isinstance(path, str) or not isinstance(content, str):
@@ -24,6 +26,16 @@ class ToolExecutor:
             if not isinstance(path, str):
                 raise ValueError("read_file wymaga pola path.")
             return self.files.read_file(path)
+        if name == "list_files":
+            path = arguments.get("path", ".")
+            if not isinstance(path, str):
+                raise ValueError("list_files: path musi być tekstem.")
+            return "\n".join(self.files.list_files(path)) or "(brak plików)"
+        if name == "search_files":
+            query, path = arguments.get("query"), arguments.get("path", ".")
+            if not isinstance(query, str) or not isinstance(path, str):
+                raise ValueError("search_files wymaga query i opcjonalnego path.")
+            return "\n".join(self.files.search_files(query, path)) or "(brak wyników)"
         if name == "run_python":
             path = arguments.get("path")
             if not isinstance(path, str):
