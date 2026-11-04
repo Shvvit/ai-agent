@@ -210,7 +210,7 @@ def chat(payload: ChatRequest) -> ChatResponse:
     command_answer: str | None = None
     if message == "/memory":
         items = memory.list_memories()
-        command_answer = "\\n".join(
+        command_answer = "\n".join(
             f"{item['id']}. {item['content']}" for item in items
         ) or "Pamięć jest pusta."
     elif message == "/clear_memory":
