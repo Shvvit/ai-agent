@@ -3,7 +3,19 @@ Set-Location $PSScriptRoot
 if (-not (Get-Command py -ErrorAction SilentlyContinue)) {
     throw "Nie znaleziono Python Launcher. Zainstaluj Python 3.12 lub 3.13."
 }
-py -3.12 -m venv .venv
+$pythonVersion = $null
+foreach ($candidate in @("3.12", "3.13")) {
+    & py "-$candidate" --version *> $null
+    if ($LASTEXITCODE -eq 0) {
+        $pythonVersion = $candidate
+        break
+    }
+}
+if (-not $pythonVersion) {
+    throw "Wymagany Python 3.12 lub 3.13. Zainstaluj jedną z tych wersji."
+}
+Write-Host "Używam Python $pythonVersion"
+& py "-$pythonVersion" -m venv .venv
 if (-not (Test-Path ".venv\Scripts\python.exe")) {
     throw "Nie udało się utworzyć środowiska .venv."
 }
