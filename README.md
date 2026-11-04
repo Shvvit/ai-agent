@@ -20,7 +20,7 @@ Modułowy agent AI dla Windows 10/11 i Linux. Domyślnie używa lokalnej Ollama 
 
 ## Instalacja
 
-Wymagany Python 3.12 lub 3.13 i zainstalowana aplikacja Ollama.
+Wymagany Python 3.12 lub 3.13. Ollama jest potrzebna dla domyślnego dostawcy lokalnego; można też skonfigurować endpoint zgodny z OpenAI Chat Completions.
 
 **Windows 10/11 (PowerShell):**
 ```powershell
