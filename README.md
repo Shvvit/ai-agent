@@ -6,6 +6,7 @@ Lokalny agent AI dla Windows 10/11 i Linux, oparty obecnie na Ollama. Domyślny 
 - polski interfejs webowy z historią rozmów,
 - lokalna baza SQLite,
 - adapter Ollama i obsługa wywołań narzędzi,
+- podstawowe delegowanie do agentów specjalistycznych (planista, analityk, programista, recenzent) z limitem zagnieżdżenia,
 - odczyt i zapis plików w ograniczonym katalogu workspace,
 - listowanie plików i wyszukiwanie tekstu w projekcie,
 - uruchamianie skryptów Python z limitem czasu,
@@ -62,7 +63,7 @@ Serwer domyślnie nasłuchuje tylko na localhost. Nie wystawiaj go do sieci bez 
 
 ## Czego jeszcze nie ma
 
-To nie jest jeszcze odpowiednik pełnego komercyjnego agenta. Pamięć semantyczna, multi-agent, routing/benchmark modeli, integracje API chmurowych, przeglądarka i wyszukiwanie WWW, multimodalność, streaming/anulowanie, terminal z zatwierdzaniem komend, sandbox OS i bezpieczny dostęp zdalny są wymienione jako kolejne etapy. Zobacz [docs/ROADMAP.md](docs/ROADMAP.md).
+To nie jest jeszcze odpowiednik pełnego komercyjnego agenta. Pamięć semantyczna, zaawansowany multi-agent (równoległa praca, różne modele, koordynator i wspólny stan), routing/benchmark modeli, integracje API chmurowych, przeglądarka i wyszukiwanie WWW, multimodalność, streaming/anulowanie, terminal z zatwierdzaniem komend, sandbox OS i bezpieczny dostęp zdalny są wymienione jako kolejne etapy. Zobacz [docs/ROADMAP.md](docs/ROADMAP.md).
 
 
 ## Pamięć agenta
