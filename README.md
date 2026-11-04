@@ -5,6 +5,7 @@ Lokalny agent AI dla Windows 10/11 i Linux, oparty obecnie na Ollama. Domyślny 
 ## Co działa
 - polski interfejs webowy z historią rozmów, wyborem modelu i usuwaniem rozmów z poziomu panelu,
 - lokalna baza SQLite,
+- trwała kolejka zadań: zapisywanie, podgląd statusu, wykonywanie i anulowanie zadań oczekujących,
 - adapter Ollama i obsługa wywołań narzędzi,
 - podstawowe delegowanie do agentów specjalistycznych (planista, analityk, programista, recenzent) z limitem zagnieżdżenia,
 - odczyt i zapis plików w ograniczonym katalogu workspace,
@@ -65,6 +66,10 @@ Serwer domyślnie nasłuchuje tylko na localhost. Nie wystawiaj go do sieci bez 
 
 To nie jest jeszcze odpowiednik pełnego komercyjnego agenta. Pamięć semantyczna, zaawansowany multi-agent (równoległa praca, różne modele, koordynator i wspólny stan), routing/benchmark modeli, integracje API chmurowych, przeglądarka i wyszukiwanie WWW, multimodalność, streaming/anulowanie, terminal z zatwierdzaniem komend, sandbox OS i bezpieczny dostęp zdalny są wymienione jako kolejne etapy. Zobacz [docs/ROADMAP.md](docs/ROADMAP.md).
 
+
+## Zadania agenta
+
+Panel zadań jest dostępny w ustawieniach interfejsu. Zadania są trwale zapisywane w SQLite. API: `POST /api/tasks` (utworzenie), `GET /api/tasks` (lista), `GET /api/tasks/{id}` (szczegóły), `POST /api/tasks/{id}/execute` (synchroniczne wykonanie przez Ollama), `POST /api/tasks/{id}/cancel` (anulowanie zadania oczekującego). Aktywnego wywołania modelu nie można jeszcze przerwać; anulowanie działa wyłącznie przed rozpoczęciem. Wykonywanie zadania blokuje żądanie do zakończenia modelu.
 
 ## Pamięć agenta
 
