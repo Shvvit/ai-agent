@@ -309,4 +309,4 @@ def test_capabilities_endpoint_reports_real_limits(monkeypatch, tmp_path):
         assert data["tasks"]["background_workers"] is False
         assert data["tasks"]["interrupt_running"] is False
         assert data["sandbox"]["os_isolation"] is False
-        assert data["remote_access"] is False
+        assert data["secure_remote_access"] is False
