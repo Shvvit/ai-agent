@@ -69,7 +69,16 @@ class MemoryManager:
             return []
         ranked = []
         for item in self.list_memories(limit=500):
-            matched = tokens & self._tokens(item["content"])
+            content_tokens = self._tokens(item["content"])
+            matched = {
+                query_token for query_token in tokens
+                if any(
+                    content_token == query_token
+                    or (len(query_token) >= 4 and content_token.startswith(query_token[:4]))
+                    or (len(content_token) >= 4 and query_token.startswith(content_token[:4]))
+                    for content_token in content_tokens
+                )
+            }
             if matched:
                 ranked.append((len(matched), item["id"], item))
         ranked.sort(key=lambda row: (row[0], row[1]), reverse=True)
