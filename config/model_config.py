@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from urllib.parse import urlsplit
 from dataclasses import dataclass
 
 
@@ -25,8 +26,13 @@ class ModelConfig:
                 f"Nieobsługiwany provider: {provider}. "
                 "Obecnie dostępny jest ollama."
             )
-        if not model:
-            raise ValueError("AI_MODEL nie może być pusty.")
+        if not model or len(model) > 128 or any(ch in model for ch in "\\r\\n"):
+            raise ValueError("AI_MODEL musi mieć od 1 do 128 znaków i nie może zawierać nowych linii.")
+        parsed_host = urlsplit(host)
+        if parsed_host.scheme not in {"http", "https"} or not parsed_host.hostname:
+            raise ValueError("AI_HOST musi być poprawnym adresem HTTP lub HTTPS.")
+        if parsed_host.username or parsed_host.password or parsed_host.query or parsed_host.fragment:
+            raise ValueError("AI_HOST nie może zawierać danych logowania, query ani fragmentu.")
         try:
             temperature = float(raw_temperature)
         except ValueError as exc:
