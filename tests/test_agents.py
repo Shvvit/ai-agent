@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from agents.base import BaseAgent
-from models.providers import ModelResponse
+from models.providers import ModelResponse, OllamaModel
 
 
 class FakeModel:
@@ -62,7 +62,7 @@ def test_specialist_cannot_delegate_recursively():
 def test_ollama_agent_executes_specialist_delegation(monkeypatch):
     from types import SimpleNamespace
 
-    import agents.base as base_module
+    import models.providers.ollama as ollama_provider
     from config.model_config import ModelConfig
 
     calls = []
@@ -80,8 +80,8 @@ def test_ollama_agent_executes_specialist_delegation(monkeypatch):
                 return SimpleNamespace(message=SimpleNamespace(tool_calls=[], content="Analiza gotowa."))
             return SimpleNamespace(message=SimpleNamespace(tool_calls=[], content="Wynik końcowy."))
 
-    monkeypatch.setattr(base_module.ollama, "Client", lambda **kwargs: FakeClient())
-    agent = BaseAgent(model=base_module.OllamaModel(config=ModelConfig()))
+    monkeypatch.setattr(ollama_provider.ollama, "Client", lambda **kwargs: FakeClient())
+    agent = BaseAgent(model=OllamaModel(config=ModelConfig()))
     assert agent.run("Zbadaj ryzyko.") == "Wynik końcowy."
     assert len(calls) == 3
     assert any(
