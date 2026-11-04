@@ -59,6 +59,10 @@ Otwórz http://127.0.0.1:8000. Szczegóły: [docs/INSTALLATION.md](docs/INSTALLA
 | `AI_DATA_DIR` | `./data` | Lokalna baza i dane |
 | `AI_PORT` | `8000` | Port interfejsu |
 
+## Diagnostyka możliwości
+
+`GET /api/capabilities` zwraca listę dostępnych narzędzi i jawne ograniczenia systemu (m.in. brak sandboxa OS, brak przerywania aktywnych zadań i wyłączony zdalny dostęp). Panel diagnostyczny pokazuje te informacje bez ujawniania kluczy API.
+
 ## Testy
 
 ```powershell
