@@ -2,6 +2,9 @@
 
 ## Działające elementy w tej wersji
 - lokalny adapter Ollama i wywołania narzędzi function-calling,
+- rejestr modeli i regułowy router profili z automatycznym wyborem modelu, gdy profile są skonfigurowane,
+- opcjonalne wyszukiwanie WWW przez Tavily/Brave (wymaga klucza API),
+- trwała kolejka zadań i panel zarządzania zadaniami, z planowaniem i weryfikacją rezultatów,
 - podstawowe delegowanie do ról specjalistycznych (planner/analyst/coder/reviewer), z wyłączonym rekurencyjnym delegowaniem i limitem podzadań,
 - webowy interfejs rozmowy po polsku,
 - lokalna historia SQLite,
@@ -16,11 +19,11 @@
 ## Wymaga dalszej implementacji
 - pamięć semantyczna/wektorowa, automatyczne wydobywanie faktów i trwałe profile użytkownika,
 - zaawansowany koordynator multi-agent: praca równoległa, współdzielony stan zadań, osobne modele/limity i niezależne potwierdzanie wyników,
-- routing i benchmark modeli lokalnych/zewnętrznych,
-- wyszukiwanie WWW i przeglądarka z kontrolą zgód,
+- benchmark modeli lokalnych, dobór na podstawie rzeczywistych testów i routing wielu dostawców,
+- pełna przeglądarka i ekstrakcja treści stron z kontrolą zgód (samo wyszukiwanie WWW jest dostępne opcjonalnie),
 - terminal z allowlistą komend i potwierdzeniami,
 - obsługa obrazów/audio/wideo,
-- streaming odpowiedzi i anulowanie zadań,
+- streaming odpowiedzi i przerywanie aktywnych zadań (anulowanie oczekujących zadań już działa),
 - izolowany sandbox OS (AppContainer/seccomp/kontenery),
 - audyt, uwierzytelnianie i bezpieczny tryb zdalny.
 
