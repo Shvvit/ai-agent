@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101116"><title>Własne AI</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><div class="brand-mark">✳</div><div><b>Własne AI</b><small>Personal agent workspace</small></div></div>
+    <button class="new-chat" id="newChat">＋ <span>Nowa rozmowa</span></button>
+    <div class="side-label">TWOJE ROZMOWY</div><nav id="conversationList" class="conversation-list"></nav>
+    <div class="sidebar-bottom"><div class="status-line"><span class="status-dot" id="statusDot"></span><span id="statusText">Sprawdzanie połączenia…</span></div><button class="settings-link" id="settingsButton">⚙ Ustawienia i diagnostyka</button></div>
+  </aside>
+  <main class="main">
+    <header class="topbar"><button class="icon-button mobile-menu" id="menuButton" aria-label="Menu">☰</button><div class="crumb">Workspace <span>/</span> <b id="currentTitle">Nowa rozmowa</b></div><div class="top-actions"><span class="model-chip" id="modelChip">Qwen / Ollama</span><button class="avatar">P</button></div></header>
+    <section class="chat-area" id="chatArea">
+      <div class="welcome" id="welcome">
+        <div class="welcome-icon">✳</div><div class="eyebrow">TWÓJ LOKALNY ASYSTENT</div>
+        <h1>Co dziś <span>zbudujemy?</span></h1><p>Agent do myślenia, kodowania i wykonywania zadań. Twoje dane pozostają na tym komputerze.</p>
+        <div class="suggestions">
+          <button class="suggestion" data-prompt="Przeanalizuj strukturę mojego projektu i zaproponuj plan ulepszeń."><b>⌘</b><span><strong>Analiza projektu</strong><small>Znajdź problemy i zaplanuj poprawki</small></span>↗</button>
+          <button class="suggestion" data-prompt="Napisz program w Pythonie, który uporządkuje pliki w folderze według rozszerzeń. Najpierw zaplanuj rozwiązanie."><b>⌁</b><span><strong>Pomoc w kodowaniu</strong><small>Projektuj, pisz i testuj kod</small></span>↗</button>
+          <button class="suggestion" data-prompt="Wyjaśnij, jak działa agent AI z użyciem narzędzi i pamięci."><b>◎</b><span><strong>Wyjaśnij mi temat</strong><small>Ucz się krok po kroku</small></span>↗</button>
+        </div>
+      </div>
+      <div class="messages" id="messages"></div>
+    </section>
+    <footer class="composer-wrap"><form id="chatForm" class="composer"><textarea id="promptInput" rows="1" placeholder="Napisz wiadomość lub opisz zadanie…" maxlength="20000"></textarea><div class="composer-tools"><div class="composer-hint">Enter, aby wysłać · Shift + Enter, nowa linia</div><div class="composer-actions"><select id="modelSelect" aria-label="Model"><option value="">Domyślny model</option></select><button class="send-button" id="sendButton" type="submit" aria-label="Wyślij">↑</button></div></div></form><div class="disclaimer">Agent może popełniać błędy. Sprawdzaj ważne wyniki i zatwierdzaj działania na plikach.</div></footer>
+  </main>
+</div>
+<dialog id="settingsDialog"><div class="dialog-head"><div><small>USTAWIENIA</small><h2>Diagnostyka systemu</h2></div><button class="icon-button" id="closeSettings">✕</button></div><div id="diagnostics" class="diagnostics">Ładowanie…</div><p class="settings-note">Model i adres Ollama możesz zmienić przez zmienne środowiskowe AI_MODEL i AI_HOST, a następnie ponownie uruchomić aplikację.</p></dialog>
+<script src="/static/app.js"></script>
+</body></html>
