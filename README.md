@@ -73,4 +73,4 @@ W ustawieniach interfejsu można dodawać, przeglądać i usuwać zapisane infor
 - `DELETE /api/memory/{id}` — usunięcie wpisu,
 - `DELETE /api/memory` — wyczyszczenie pamięci.
 
-Pamięć jest lokalna (SQLite), ograniczona do 2000 ostatnich wpisów i przeszukiwana leksykalnie. To nie jest jeszcze pamięć wektorowa ani automatyczne profilowanie użytkownika.
+Pamięć jest lokalna (SQLite), ograniczona do 2000 ostatnich wpisów i przeszukiwana leksykalnie. To nie jest jeszcze pamięć wektorowa ani automatyczne profilowanie użytkownika. W czacie działają też komendy: `/remember treść`, `/memory` i `/clear_memory`.
