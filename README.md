@@ -8,6 +8,7 @@ Lokalny agent AI dla Windows 10/11 i Linux, oparty obecnie na Ollama. Domyślny 
 - trwała kolejka zadań: zapisywanie, podgląd statusu, wykonywanie i anulowanie zadań oczekujących,
 - adapter Ollama i obsługa wywołań narzędzi,
 - rejestr modeli Ollama i prosty router profili (kodowanie/analityka/szybkie zadania) z kontrolowanym fallbackiem,
+- opcjonalne wyszukiwanie WWW przez API Tavily lub Brave, dostępne jako narzędzie agenta po skonfigurowaniu klucza,
 - podstawowe delegowanie do agentów specjalistycznych (planista, analityk, programista, recenzent) z limitem zagnieżdżenia,
 - odczyt i zapis plików w ograniczonym katalogu workspace,
 - listowanie plików i wyszukiwanie tekstu w projekcie,
@@ -50,6 +51,9 @@ Otwórz http://127.0.0.1:8000. Szczegóły: [docs/INSTALLATION.md](docs/INSTALLA
 | `AI_MODEL_REASONING` | — | Opcjonalny model do analizy i planowania |
 | `AI_MODEL_FAST` | — | Opcjonalny model do krótkich i szybkich zadań |
 | `AI_AUTO_ROUTING` | `1` | Automatyczny wybór profilu modelu w czacie (`0` wyłącza) |
+| `AI_WEB_SEARCH_PROVIDER` | — | `tavily` lub `brave`; bez ustawienia wyszukiwanie jest wyłączone |
+| `AI_WEB_SEARCH_API_KEY` | — | Klucz API dostawcy wyszukiwania |
+| `AI_WEB_SEARCH_MAX_RESULTS` | `5` | Maksymalna liczba wyników (1–10) |
 | `AI_WORKSPACE` | `./workspace` | Katalog plików agenta |
 | `AI_DATA_DIR` | `./data` | Lokalna baza i dane |
 | `AI_PORT` | `8000` | Port interfejsu |
@@ -69,7 +73,7 @@ Serwer domyślnie nasłuchuje tylko na localhost. Nie wystawiaj go do sieci bez 
 
 ## Czego jeszcze nie ma
 
-To nie jest jeszcze odpowiednik pełnego komercyjnego agenta. Pamięć semantyczna, zaawansowany multi-agent (równoległa praca, różne modele, koordynator i wspólny stan), routing/benchmark modeli, integracje API chmurowych, przeglądarka i wyszukiwanie WWW, multimodalność, streaming/anulowanie, terminal z zatwierdzaniem komend, sandbox OS i bezpieczny dostęp zdalny są wymienione jako kolejne etapy. Zobacz [docs/ROADMAP.md](docs/ROADMAP.md).
+To nie jest jeszcze odpowiednik pełnego komercyjnego agenta. Pamięć semantyczna, zaawansowany multi-agent (równoległa praca, różne modele, koordynator i wspólny stan), routing/benchmark modeli, integracje API chmurowych, pełna przeglądarka i ekstrakcja treści stron (wyszukiwanie WWW ma już opcjonalną integrację Tavily/Brave), multimodalność, streaming/anulowanie, terminal z zatwierdzaniem komend, sandbox OS i bezpieczny dostęp zdalny są wymienione jako kolejne etapy. Zobacz [docs/ROADMAP.md](docs/ROADMAP.md).
 
 
 ## Zadania agenta
