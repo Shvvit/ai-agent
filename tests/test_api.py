@@ -102,3 +102,30 @@ def test_memory_api_clear_all(monkeypatch, tmp_path):
         assert cleared.status_code == 200
         assert cleared.json()["deleted"] == 2
         assert client.get("/api/memory").json()["memories"] == []
+
+
+def test_memory_slash_commands(monkeypatch, tmp_path):
+    module = importlib.import_module("api.app")
+    monkeypatch.setattr(module, "DB_PATH", tmp_path / "agent.sqlite3")
+
+    class UnexpectedAgent:
+        def __init__(self, **kwargs):
+            raise AssertionError("Slash commands must not call the language model.")
+
+    monkeypatch.setattr(module, "BaseAgent", UnexpectedAgent)
+    with TestClient(module.app) as client:
+        saved = client.post("/api/chat", json={"message": "/remember I use Qwen locally"})
+        assert saved.status_code == 200
+        assert "Zapamiętano" in saved.json()["answer"]
+
+        listed = client.post("/api/chat", json={"message": "/memory"})
+        assert listed.status_code == 200
+        assert "I use Qwen locally" in listed.json()["answer"]
+
+        cleared = client.post("/api/chat", json={"message": "/clear_memory"})
+        assert cleared.status_code == 200
+        assert "Usunięto wpisów: 1" in cleared.json()["answer"]
+
+        empty = client.post("/api/chat", json={"message": "/memory"})
+        assert empty.status_code == 200
+        assert "Pamięć jest pusta" in empty.json()["answer"]
