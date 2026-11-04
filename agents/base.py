@@ -140,6 +140,18 @@ class BaseAgent:
                     },
                 },
             })
+        definitions.append({
+            "type": "function",
+            "function": {
+                "name": "run_command",
+                "description": "Uruchamia wyłącznie dozwolone, diagnostyczne komendy bez powłoki (np. ollama list, python --version, git status). Nie wykonuje dowolnych poleceń.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"command": {"type": "string", "description": "Jedna komenda z bezpiecznej allowlisty."}},
+                    "required": ["command"],
+                },
+            },
+        })
         if self.tools.web_search_available:
             definitions.append({
                 "type": "function",
