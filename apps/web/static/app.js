@@ -95,6 +95,51 @@ async function sendMessage(message) {
   }
 }
 
+async function refreshMemory() {
+  const list = $("memoryList");
+  if (!list) return;
+  try {
+    const data = await api("/api/memory");
+    list.replaceChildren();
+    if (!data.memories.length) {
+      list.textContent = "Brak zapisanych informacji.";
+      return;
+    }
+    data.memories.forEach((memory) => {
+      const row = document.createElement("div");
+      row.className = "memory-item";
+      const content = document.createElement("span");
+      content.textContent = memory.content;
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.textContent = "Usuń";
+      remove.setAttribute("aria-label", "Usuń zapamiętaną informację");
+      remove.addEventListener("click", async () => {
+        try {
+          await api("/api/memory/" + memory.id, {method: "DELETE"});
+          await refreshMemory();
+        } catch (error) { alert(error.message); }
+      });
+      row.append(content, remove);
+      list.append(row);
+    });
+  } catch (error) {
+    list.textContent = "Nie można pobrać pamięci: " + error.message;
+  }
+}
+
+$("memoryForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const input = $("memoryInput");
+  const content = input.value.trim();
+  if (!content) return;
+  try {
+    await api("/api/memory", {method: "POST", body: JSON.stringify({content})});
+    input.value = "";
+    await refreshMemory();
+  } catch (error) { alert(error.message); }
+});
+
 async function diagnostics() {
   const [health, modelData] = await Promise.allSettled([api("/api/health"), api("/api/models")]);
   const online = health.status === "fulfilled" && health.value.ollama === "online";
@@ -146,7 +191,7 @@ $("promptInput").addEventListener("input", (event) => {
 });
 $("newChat").addEventListener("click", newChat);
 $("menuButton").addEventListener("click", () => $("sidebar").classList.toggle("open"));
-$("settingsButton").addEventListener("click", () => { $("settingsDialog").showModal(); diagnostics(); });
+$("settingsButton").addEventListener("click", () => { $("settingsDialog").showModal(); diagnostics(); refreshMemory(); });
 $("closeSettings").addEventListener("click", () => $("settingsDialog").close());
 document.querySelectorAll(".suggestion").forEach(button => button.addEventListener("click", () => {
   $("promptInput").value = button.dataset.prompt;
