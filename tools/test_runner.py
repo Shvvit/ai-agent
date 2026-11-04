@@ -61,10 +61,15 @@ class TestRunner:
             stdout_file.seek(0)
             stderr_file.seek(0)
             stdout = stdout_file.read(self.max_output_bytes + 1)
-            stderr = stderr_file.read(self.max_output_bytes + 1)
-        truncated = len(stdout) > self.max_output_bytes or len(stderr) > self.max_output_bytes
-        output = (stdout[:self.max_output_bytes].decode("utf-8", errors="replace")
-                  + "\n" + stderr[:self.max_output_bytes].decode("utf-8", errors="replace")).strip()
+            stdout_truncated = len(stdout) > self.max_output_bytes
+            stdout = stdout[:self.max_output_bytes]
+            remaining = self.max_output_bytes - len(stdout)
+            stderr = stderr_file.read(remaining + 1)
+            stderr_truncated = len(stderr) > remaining
+            stderr = stderr[:remaining]
+        truncated = stdout_truncated or stderr_truncated
+        output = (stdout.decode("utf-8", errors="replace")
+                  + "\n" + stderr.decode("utf-8", errors="replace")).strip()
         if truncated:
             output += "\n[Wynik skrócony do limitu.]"
         if timed_out:
