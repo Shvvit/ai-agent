@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -34,8 +35,18 @@ class OpenAICompatibleModel:
         self.base_url = self.base_url.rstrip("/")
         if not self.model or len(self.model) > 256:
             raise ValueError("Nazwa modelu musi mieć od 1 do 256 znaków.")
-        if not self.base_url.startswith(("http://", "https://")):
-            raise ValueError("Adres API musi zaczynać się od http:// lub https://.")
+        parsed_url = urlsplit(self.base_url)
+        try:
+            parsed_url.port
+        except ValueError as exc:
+            raise ValueError("Adres API zawiera nieprawidłowy port.") from exc
+        if parsed_url.scheme not in {"http", "https"} or not parsed_url.hostname:
+            raise ValueError("Adres API musi być poprawnym adresem HTTP lub HTTPS.")
+        if (parsed_url.username or parsed_url.password or parsed_url.query
+                or parsed_url.fragment or any(char.isspace() for char in self.base_url)):
+            raise ValueError(
+                "Adres API nie może zawierać danych logowania, query, fragmentu ani białych znaków."
+            )
         if not 0.0 <= self.temperature <= 2.0:
             raise ValueError("Temperatura musi mieścić się w zakresie 0–2.")
         if not 1.0 <= self.timeout <= 600.0:
