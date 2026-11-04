@@ -51,7 +51,7 @@ class ToolExecutor:
             if not isinstance(command, str):
                 raise ValueError("run_command wymaga pola command.")
             result = self.terminal.run(command)
-            return f"SUCCESS: {result.success}\\nEXIT CODE: {result.return_code}\\n{result.output}"
+            return f"SUCCESS: {result.success}\nEXIT CODE: {result.return_code}\n{result.output}"
         if name == "web_search":
             query = arguments.get("query")
             if not isinstance(query, str):
@@ -59,8 +59,8 @@ class ToolExecutor:
             results = self.web.search(query)
             if not results:
                 return "(brak wyników)"
-            return "\\n".join(
-                f"{index}. {item['title']}\\nURL: {item['url']}\\n{item['snippet']}"
+            return "\n".join(
+                f"{index}. {item['title']}\nURL: {item['url']}\n{item['snippet']}"
                 for index, item in enumerate(results, start=1)
             )
         if name == "run_python":
