@@ -1,12 +1,12 @@
 # Własne AI
 
-Lokalny agent AI dla Windows 10/11 i Linux, oparty obecnie na Ollama. Domyślny model to `qwen3:8b`; można wybrać dowolny model obecny w lokalnej bibliotece Ollama.
+Modułowy agent AI dla Windows 10/11 i Linux. Domyślnie używa lokalnej Ollama (`qwen3:8b`), ale rdzeń obsługuje też adapter API zgodnego z OpenAI Chat Completions.
 
 ## Co działa
 - polski interfejs webowy z historią rozmów, wyborem modelu i usuwaniem rozmów z poziomu panelu,
 - lokalna baza SQLite,
 - trwała kolejka zadań: zapisywanie, podgląd statusu, wykonywanie i anulowanie zadań oczekujących,
-- adapter Ollama i obsługa wywołań narzędzi,
+- wspólny kontrakt dostawców modeli, adapter Ollama i adapter API zgodnego z OpenAI Chat Completions (z wywołaniami narzędzi),
 - rejestr modeli Ollama i prosty router profili (kodowanie/analityka/szybkie zadania) z kontrolowanym fallbackiem,
 - ograniczone narzędzie terminala tylko do komend diagnostycznych read-only (bez dowolnego shell),
 - opcjonalne wyszukiwanie WWW przez API Tavily lub Brave, dostępne jako narzędzie agenta po skonfigurowaniu klucza,
@@ -44,9 +44,9 @@ Otwórz http://127.0.0.1:8000. Szczegóły: [docs/INSTALLATION.md](docs/INSTALLA
 
 | Zmienna | Domyślnie | Opis |
 |---|---|---|
-| `AI_PROVIDER` | `ollama` | Dostawca (obecnie Ollama) |
+| `AI_PROVIDER` | `ollama` | `ollama` lub `openai_compatible` |
 | `AI_MODEL` | `qwen3:8b` | Model |
-| `AI_HOST` | `http://127.0.0.1:11434` | Adres serwera Ollama |
+| `AI_HOST` | `http://127.0.0.1:11434` | Adres serwera Ollama |\n| `AI_BASE_URL` | `https://api.openai.com/v1` | Bazowy adres API zgodnego z OpenAI |\n| `AI_API_KEY` | — | Klucz API dla `openai_compatible` (nie zapisuj go w repozytorium) |\n| `AI_REQUEST_TIMEOUT` | `90` | Timeout żądania modelu w sekundach |
 | `AI_TEMPERATURE` | `0.2` | Temperatura generowania |
 | `AI_MODEL_CODE` | — | Opcjonalny model do zadań programistycznych |
 | `AI_MODEL_REASONING` | — | Opcjonalny model do analizy i planowania |
@@ -78,14 +78,14 @@ Serwer domyślnie nasłuchuje tylko na localhost. Nie wystawiaj go do sieci bez 
 
 ## Czego jeszcze nie ma
 
-To nie jest jeszcze odpowiednik pełnego komercyjnego agenta. Pamięć semantyczna, zaawansowany multi-agent (równoległa praca, różne modele, koordynator i wspólny stan), routing/benchmark modeli, integracje API chmurowych, pełna przeglądarka i ekstrakcja treści stron (wyszukiwanie WWW ma już opcjonalną integrację Tavily/Brave), multimodalność, streaming/anulowanie, terminal z zatwierdzaniem komend, sandbox OS i bezpieczny dostęp zdalny są wymienione jako kolejne etapy. Zobacz [docs/ROADMAP.md](docs/ROADMAP.md).
+To nie jest jeszcze odpowiednik pełnego komercyjnego agenta. Pamięć semantyczna, zaawansowany multi-agent (równoległa praca, różne modele, koordynator i wspólny stan), benchmark i automatyczny routing między dostawcami, adaptery do API niezgodnych z OpenAI, pełna przeglądarka i ekstrakcja treści stron (wyszukiwanie WWW ma już opcjonalną integrację Tavily/Brave), multimodalność, streaming/anulowanie, terminal z zatwierdzaniem komend, sandbox OS i bezpieczny dostęp zdalny są wymienione jako kolejne etapy. Zobacz [docs/ROADMAP.md](docs/ROADMAP.md).
 
 
 ## Zadania agenta
 
 Panel zadań jest dostępny w ustawieniach interfejsu. Zadania są trwale zapisywane w SQLite. API modeli: `GET /api/models/recommend?task=...` dobiera skonfigurowany model profilu, jeśli jest zainstalowany; w przeciwnym razie używa modelu domyślnego lub najmniejszego dostępnego. To routing regułowy, nie benchmark wydajności.
 
-API: `POST /api/tasks` (utworzenie), `GET /api/tasks` (lista), `GET /api/tasks/{id}` (szczegóły), `POST /api/tasks/{id}/execute` (synchroniczne wykonanie przez Ollama), `POST /api/tasks/{id}/cancel` (anulowanie zadania oczekującego). Aktywnego wywołania modelu nie można jeszcze przerwać; anulowanie działa wyłącznie przed rozpoczęciem. Wykonywanie zadania blokuje żądanie do zakończenia modelu.
+API: `POST /api/tasks` (utworzenie), `GET /api/tasks` (lista), `GET /api/tasks/{id}` (szczegóły), `POST /api/tasks/{id}/execute` (synchroniczne wykonanie przez skonfigurowanego dostawcę modelu), `POST /api/tasks/{id}/cancel` (anulowanie zadania oczekującego). Aktywnego wywołania modelu nie można jeszcze przerwać; anulowanie działa wyłącznie przed rozpoczęciem. Wykonywanie zadania blokuje żądanie do zakończenia modelu.
 
 ## Pamięć agenta
 
