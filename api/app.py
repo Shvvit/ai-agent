@@ -139,7 +139,7 @@ def capabilities() -> dict[str, Any]:
                   "cancel_pending": True, "interrupt_running": False},
         "terminal": {"mode": "read_only_allowlist", "shell": False},
         "sandbox": {"os_isolation": False},
-        "remote_access": False,
+        "secure_remote_access": False, "recommended_bind": "127.0.0.1",
     }
 
 
