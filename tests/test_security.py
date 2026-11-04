@@ -64,3 +64,10 @@ def test_terminal_runner_reports_timeout(monkeypatch, tmp_path):
     result = TerminalRunner(tmp_path).run("ollama list")
     assert result.success is False
     assert result.return_code == -1
+
+
+def test_server_rejects_invalid_port(monkeypatch):
+    runner = importlib.import_module("scripts.run")
+    monkeypatch.setenv("AI_BIND_HOST", "127.0.0.1")
+    monkeypatch.setenv("AI_PORT", "70000")
+    assert runner.main() == 2
