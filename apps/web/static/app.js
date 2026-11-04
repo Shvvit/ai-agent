@@ -273,7 +273,7 @@ async function diagnostics() {
     rows.push(["Narzędzia", capabilityData.value.tools.join(", ")]);
     rows.push(["Pamięć", capabilityData.value.memory.retrieval]);
     rows.push(["Sandbox", capabilityData.value.sandbox.os_isolation ? "izolacja OS" : "brak izolacji OS"]);
-    rows.push(["Zdalny dostęp", capabilityData.value.remote_access ? "włączony" : "wyłączony"]);
+    rows.push(["Bezpieczny dostęp zdalny", capabilityData.value.secure_remote_access ? "dostępny" : "brak"]);
   } else rows.push(["Funkcje", "nie można pobrać listy"]);
   const diagnostics = $("diagnostics");
   diagnostics.replaceChildren();
