@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import httpx
 
@@ -25,7 +25,7 @@ class OpenAICompatibleModel:
 
     model: str
     base_url: str = "https://api.openai.com/v1"
-    api_key: str = ""
+    api_key: str = field(default="", repr=False)
     temperature: float = 0.2
     timeout: float = 90.0
 
