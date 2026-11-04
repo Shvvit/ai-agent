@@ -6,7 +6,7 @@
 - `agents/base.py`: niezależna od dostawcy pętla agenta, historia i function calling.
 - `models/providers/base.py`: wspólny kontrakt adapterów, możliwości modelu i znormalizowane wywołania narzędzi.
 - `models/providers/openai_compatible.py`: adapter HTTP dla API zgodnych z OpenAI Chat Completions.
-- `agents/base.py::OllamaModel`: adapter lokalnej Ollama.
+- `models/providers/ollama.py`: adapter lokalnej Ollama.
 - `models/factory.py`: wybór adaptera na podstawie konfiguracji.
 - `agents/planner.py`: przygotowanie planu dla zadania.
 - `core/engine.py`: plan → wykonanie → weryfikacja wybranych rezultatów → ograniczone próby naprawy.
