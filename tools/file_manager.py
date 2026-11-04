@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path, PureWindowsPath
 
 
 class FileManager:
     """Obsługuje pliki wyłącznie wewnątrz katalogu workspace."""
 
-    def __init__(self, workspace: str | Path = "workspace", max_file_bytes: int = 2_000_000) -> None:
+    def __init__(self, workspace: str | Path | None = None, max_file_bytes: int = 2_000_000) -> None:
+        workspace = workspace if workspace is not None else os.getenv("AI_WORKSPACE", "workspace")
         self.workspace = Path(workspace).resolve()
         self.workspace.mkdir(parents=True, exist_ok=True)
         self.max_file_bytes = max_file_bytes
