@@ -7,6 +7,7 @@ Lokalny agent AI dla Windows 10/11 i Linux, oparty obecnie na Ollama. Domyślny 
 - lokalna baza SQLite,
 - trwała kolejka zadań: zapisywanie, podgląd statusu, wykonywanie i anulowanie zadań oczekujących,
 - adapter Ollama i obsługa wywołań narzędzi,
+- rejestr modeli Ollama i prosty router profili (kodowanie/analityka/szybkie zadania) z kontrolowanym fallbackiem,
 - podstawowe delegowanie do agentów specjalistycznych (planista, analityk, programista, recenzent) z limitem zagnieżdżenia,
 - odczyt i zapis plików w ograniczonym katalogu workspace,
 - listowanie plików i wyszukiwanie tekstu w projekcie,
@@ -45,6 +46,9 @@ Otwórz http://127.0.0.1:8000. Szczegóły: [docs/INSTALLATION.md](docs/INSTALLA
 | `AI_MODEL` | `qwen3:8b` | Model |
 | `AI_HOST` | `http://127.0.0.1:11434` | Adres serwera Ollama |
 | `AI_TEMPERATURE` | `0.2` | Temperatura generowania |
+| `AI_MODEL_CODE` | — | Opcjonalny model do zadań programistycznych |
+| `AI_MODEL_REASONING` | — | Opcjonalny model do analizy i planowania |
+| `AI_MODEL_FAST` | — | Opcjonalny model do krótkich i szybkich zadań |
 | `AI_WORKSPACE` | `./workspace` | Katalog plików agenta |
 | `AI_DATA_DIR` | `./data` | Lokalna baza i dane |
 | `AI_PORT` | `8000` | Port interfejsu |
@@ -69,7 +73,9 @@ To nie jest jeszcze odpowiednik pełnego komercyjnego agenta. Pamięć semantycz
 
 ## Zadania agenta
 
-Panel zadań jest dostępny w ustawieniach interfejsu. Zadania są trwale zapisywane w SQLite. API: `POST /api/tasks` (utworzenie), `GET /api/tasks` (lista), `GET /api/tasks/{id}` (szczegóły), `POST /api/tasks/{id}/execute` (synchroniczne wykonanie przez Ollama), `POST /api/tasks/{id}/cancel` (anulowanie zadania oczekującego). Aktywnego wywołania modelu nie można jeszcze przerwać; anulowanie działa wyłącznie przed rozpoczęciem. Wykonywanie zadania blokuje żądanie do zakończenia modelu.
+Panel zadań jest dostępny w ustawieniach interfejsu. Zadania są trwale zapisywane w SQLite. API modeli: `GET /api/models/recommend?task=...` dobiera skonfigurowany model profilu, jeśli jest zainstalowany; w przeciwnym razie używa modelu domyślnego lub najmniejszego dostępnego. To routing regułowy, nie benchmark wydajności.
+
+API: `POST /api/tasks` (utworzenie), `GET /api/tasks` (lista), `GET /api/tasks/{id}` (szczegóły), `POST /api/tasks/{id}/execute` (synchroniczne wykonanie przez Ollama), `POST /api/tasks/{id}/cancel` (anulowanie zadania oczekującego). Aktywnego wywołania modelu nie można jeszcze przerwać; anulowanie działa wyłącznie przed rozpoczęciem. Wykonywanie zadania blokuje żądanie do zakończenia modelu.
 
 ## Pamięć agenta
 
