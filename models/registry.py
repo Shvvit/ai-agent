@@ -34,6 +34,8 @@ class ModelRegistry:
 
     @classmethod
     def from_ollama_payload(cls, payload: dict[str, Any]) -> "ModelRegistry":
+        if not isinstance(payload, dict):
+            raise ValueError("Ollama zwróciła nieprawidłową odpowiedź.")
         raw = payload.get("models", [])
         if not isinstance(raw, list):
             raise ValueError("Ollama zwróciła nieprawidłową listę modeli.")
