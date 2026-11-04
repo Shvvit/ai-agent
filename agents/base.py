@@ -54,11 +54,12 @@ class BaseAgent:
     history: list[dict[str, str]] = field(default_factory=list)
     tools: ToolExecutor = field(default_factory=ToolExecutor)
     max_tool_calls: int = 5
+    allow_delegation: bool = True
 
     def _tool_definitions(self) -> list[dict]:
         """Opis narzędzi udostępnianych modelowi."""
 
-        return [
+        definitions = [
             {
                 "type": "function",
                 "function": {
@@ -123,6 +124,50 @@ class BaseAgent:
                 },
             },
         ]
+        if self.allow_delegation:
+            definitions.append({
+                "type": "function",
+                "function": {
+                    "name": "delegate_task",
+                    "description": "Deleguje podzadanie do agenta specjalistycznego (planner, analyst, coder lub reviewer).",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "role": {"type": "string", "enum": ["planner", "analyst", "coder", "reviewer"]},
+                            "task": {"type": "string", "description": "Konkretne podzadanie dla agenta."},
+                        },
+                        "required": ["role", "task"],
+                    },
+                },
+            })
+        return definitions
+
+    def _delegate(self, arguments: dict) -> str:
+        if not self.allow_delegation:
+            raise ValueError("Zagnieżdżone delegowanie jest wyłączone.")
+        if not isinstance(arguments, dict):
+            raise ValueError("Argumenty delegowania muszą być obiektem.")
+        role = arguments.get("role")
+        task = arguments.get("task")
+        role_prompts = {
+            "planner": "Jesteś agentem-planistą. Rozbij zadanie na uporządkowane, wykonalne kroki i wskaż ryzyka.",
+            "analyst": "Jesteś analitykiem. Zbadaj problem, założenia, przypadki brzegowe i możliwe rozwiązania.",
+            "coder": "Jesteś agentem programistycznym. Wykonuj konkretne prace w workspace, sprawdzaj pliki i uruchamiaj testy, jeśli to potrzebne.",
+            "reviewer": "Jesteś niezależnym recenzentem. Szukaj błędów, luk bezpieczeństwa i niezgodności z wymaganiami; nie zakładaj, że praca jest poprawna.",
+        }
+        if role not in role_prompts:
+            raise ValueError("Nieznana rola agenta.")
+        if not isinstance(task, str) or not task.strip() or len(task) > 12000:
+            raise ValueError("Podzadanie musi być tekstem o długości 1–12000 znaków.")
+        specialist = BaseAgent(
+            model=self.model,
+            system_prompt=role_prompts[role] + " Odpowiadaj po polsku i jasno oddziel fakty od przypuszczeń.",
+            history=[],
+            tools=self.tools,
+            max_tool_calls=min(3, self.max_tool_calls),
+            allow_delegation=False,
+        )
+        return specialist.run(task.strip())
 
     def run(self, task: str) -> str:
         """Wykonuje zadanie, obsługując wywołania narzędzi przez Ollama."""
@@ -179,7 +224,10 @@ class BaseAgent:
                 arguments = call.function.arguments
 
                 try:
-                    result = self.tools.execute(name, arguments)
+                    if name == "delegate_task":
+                        result = self._delegate(arguments)
+                    else:
+                        result = self.tools.execute(name, arguments)
                 except Exception as exc:
                     result = f"Błąd narzędzia: {type(exc).__name__}: {exc}"
 
