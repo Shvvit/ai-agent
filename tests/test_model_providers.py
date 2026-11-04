@@ -20,7 +20,7 @@ def test_provider_contract_types_are_provider_neutral():
 
 
 def test_factory_creates_ollama_adapter():
-    from agents.base import OllamaModel
+    from models.providers import OllamaModel
 
     provider = create_model_provider(ModelConfig(provider="ollama", model="qwen3:8b"))
     assert isinstance(provider, OllamaModel)
