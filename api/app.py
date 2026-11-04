@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import sqlite3
 import uuid
+from dataclasses import replace
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
@@ -13,7 +14,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from agents.base import BaseAgent, OllamaModel
+from agents.base import BaseAgent
+from models.factory import create_model_provider
 from config.model_config import ModelConfig
 from tools.file_manager import FileManager
 from tools.tool_executor import ToolExecutor
@@ -276,7 +278,7 @@ def execute_task(task_id: str) -> dict[str, Any]:
     try:
         cfg = load_model_config()
         agent = BaseAgent(
-            model=OllamaModel(config=cfg),
+            model=create_model_provider(cfg),
             tools=ToolExecutor(file_manager=FileManager(WORKSPACE)),
             system_prompt=(
                 "Jesteś agentem wykonawczym Własne AI. Wykonaj zapisane zadanie "
@@ -358,16 +360,14 @@ def chat(payload: ChatRequest) -> ChatResponse:
         if (not requested_model or len(requested_model) > 128
                 or any(ch.isspace() for ch in requested_model)):
             raise HTTPException(422, "Nieprawidłowa nazwa modelu.")
-        cfg = ModelConfig(provider=cfg.provider, model=requested_model, host=cfg.host,
-                          temperature=cfg.temperature)
-    elif os.getenv("AI_AUTO_ROUTING", "1").strip().lower() not in {"0", "false", "no"}:
+        cfg = replace(cfg, model=requested_model)
+    elif cfg.provider == "ollama" and os.getenv("AI_AUTO_ROUTING", "1").strip().lower() not in {"0", "false", "no"}:
         try:
             tags = httpx.get(f"{cfg.host.rstrip('/')}/api/tags", timeout=1.5)
             tags.raise_for_status()
             registry = ModelRegistry.from_ollama_payload(tags.json())
             choice = ModelRouter(registry, cfg.model).choose(message)
-            cfg = ModelConfig(provider=cfg.provider, model=choice.model, host=cfg.host,
-                              temperature=cfg.temperature)
+            cfg = replace(cfg, model=choice.model)
         except (httpx.HTTPError, ValueError):
             pass  # Keep the configured default if Ollama is temporarily unavailable.
     try:
