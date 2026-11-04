@@ -210,3 +210,21 @@ def test_tool_executor_routes_allowlisted_terminal_command():
     result = executor.execute("run_command", {"command": "ollama list"})
     assert "NAME ID SIZE" in result
     assert "SUCCESS: True" in result
+
+
+def test_test_runner_bounds_captured_output(tmp_path):
+    runner = TestRunner(workspace=tmp_path / "workspace", max_output_bytes=1024)
+    (runner.workspace / "large.py").write_text("print('x' * 5000)", encoding="utf-8")
+    result = runner.run_python("large.py")
+    assert result.success
+    assert "Wynik skrócony do limitu" in result.output
+    assert len(result.output) < 1100
+
+
+def test_test_runner_kills_timed_out_process(tmp_path):
+    runner = TestRunner(workspace=tmp_path / "workspace", timeout=1)
+    (runner.workspace / "slow.py").write_text("import time; time.sleep(3)", encoding="utf-8")
+    result = runner.run_python("slow.py")
+    assert result.success is False
+    assert result.return_code == -1
+    assert "przekroczył limit" in result.output
