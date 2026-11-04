@@ -39,6 +39,7 @@ def test_conversation_lifecycle(monkeypatch, tmp_path):
 
 def test_chat_uses_agent_and_persists_messages(monkeypatch, tmp_path):
     module = importlib.import_module("api.app")
+    monkeypatch.setenv("AI_AUTO_ROUTING", "0")
     monkeypatch.setattr(module, "DB_PATH", tmp_path / "agent.sqlite3")
     monkeypatch.setattr(module, "WORKSPACE", tmp_path / "workspace")
 
@@ -138,6 +139,7 @@ def test_memory_slash_commands(monkeypatch, tmp_path):
 
 def test_relevant_memory_is_injected_as_context(monkeypatch, tmp_path):
     module = importlib.import_module("api.app")
+    monkeypatch.setenv("AI_AUTO_ROUTING", "0")
     monkeypatch.setattr(module, "DB_PATH", tmp_path / "agent.sqlite3")
     captured = {}
 
@@ -160,6 +162,7 @@ def test_relevant_memory_is_injected_as_context(monkeypatch, tmp_path):
 
 def test_chat_bounds_history_for_small_context_models(monkeypatch, tmp_path):
     module = importlib.import_module("api.app")
+    monkeypatch.setenv("AI_AUTO_ROUTING", "0")
     monkeypatch.setattr(module, "DB_PATH", tmp_path / "agent.sqlite3")
     conversation_id = "history-test"
     captured = {}
@@ -256,3 +259,37 @@ def test_model_recommendation_endpoint(monkeypatch):
         assert response.status_code == 200
         assert response.json()["model"] == "qwen2.5-coder:7b"
         assert response.json()["profile"] == "coding"
+
+
+def test_chat_automatically_routes_coding_task(monkeypatch, tmp_path):
+    module = importlib.import_module("api.app")
+    monkeypatch.setattr(module, "DB_PATH", tmp_path / "agent.sqlite3")
+    monkeypatch.setattr(module, "WORKSPACE", tmp_path / "workspace")
+    monkeypatch.setenv("AI_MODEL_CODE", "qwen2.5-coder:7b")
+    captured = {}
+
+    class FakeResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"models": [
+                {"name": "qwen3:8b", "size": 8},
+                {"name": "qwen2.5-coder:7b", "size": 7},
+            ]}
+
+    monkeypatch.setattr(module.httpx, "get", lambda *args, **kwargs: FakeResponse())
+
+    class CapturingAgent:
+        def __init__(self, **kwargs):
+            captured["model"] = kwargs["model"].name
+
+        def run(self, message):
+            return "Gotowe"
+
+    monkeypatch.setattr(module, "BaseAgent", CapturingAgent)
+    with TestClient(module.app) as client:
+        response = client.post("/api/chat", json={"message": "Napisz program w Pythonie"})
+        assert response.status_code == 200
+        assert response.json()["model"] == "qwen2.5-coder:7b"
+        assert captured["model"] == "qwen2.5-coder:7b"
