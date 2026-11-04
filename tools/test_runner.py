@@ -3,6 +3,7 @@ from __future__ import annotations
 import subprocess
 import sys
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path, PureWindowsPath
 
@@ -52,12 +53,19 @@ class TestRunner:
                 stdin=subprocess.DEVNULL, shell=False,
             )
             timed_out = False
-            try:
-                return_code = process.wait(timeout=self.timeout)
-            except subprocess.TimeoutExpired:
-                timed_out = True
-                process.kill()
-                return_code = process.wait()
+            output_limited = False
+            deadline = time.monotonic() + self.timeout
+            while process.poll() is None:
+                if stdout_file.tell() + stderr_file.tell() > self.max_output_bytes * 4:
+                    output_limited = True
+                    process.kill()
+                    break
+                if time.monotonic() >= deadline:
+                    timed_out = True
+                    process.kill()
+                    break
+                time.sleep(0.05)
+            return_code = process.wait()
             stdout_file.seek(0)
             stderr_file.seek(0)
             stdout = stdout_file.read(self.max_output_bytes + 1)
@@ -67,7 +75,7 @@ class TestRunner:
             stderr = stderr_file.read(remaining + 1)
             stderr_truncated = len(stderr) > remaining
             stderr = stderr[:remaining]
-        truncated = stdout_truncated or stderr_truncated
+        truncated = output_limited or stdout_truncated or stderr_truncated
         output = (stdout.decode("utf-8", errors="replace")
                   + "\n" + stderr.decode("utf-8", errors="replace")).strip()
         if truncated:
