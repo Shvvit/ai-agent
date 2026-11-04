@@ -82,3 +82,21 @@ def test_engine_does_not_claim_missing_file_was_created(tmp_path):
     assert outcome.success is False
     assert outcome.verified is False
     assert "Nie znaleziono pliku" in outcome.verification
+
+
+def test_verifier_rejects_traversal_and_windows_absolute_paths(tmp_path):
+    verifier = Verifier(tmp_path)
+    assert verifier.file_exists("../outside.txt").success is False
+    assert verifier.file_exists("C:\\Users\\Public\\outside.txt").success is False
+
+
+def test_verifier_rejects_symlink_escape(tmp_path):
+    outside = tmp_path.parent / "outside-verifier.txt"
+    outside.write_text("secret", encoding="utf-8")
+    link = tmp_path / "escape.txt"
+    try:
+        link.symlink_to(outside)
+    except (OSError, NotImplementedError):
+        return
+    verifier = Verifier(tmp_path)
+    assert verifier.file_exists("escape.txt").success is False
