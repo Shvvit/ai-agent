@@ -35,7 +35,7 @@ WEB_DIR = ROOT / "apps" / "web" / "static"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 WORKSPACE.mkdir(parents=True, exist_ok=True)
 
-app = FastAPI(title="Własne AI", version="0.2.0", description="Lokalny agent AI z Ollama")
+app = FastAPI(title="Własne AI", version="0.2.0", description="Modułowy agent AI z wymiennymi dostawcami modeli")
 app.mount("/static", StaticFiles(directory=str(WEB_DIR), check_dir=False), name="static")
 
 
@@ -117,14 +117,16 @@ def home() -> FileResponse:
 @app.get("/api/health")
 def health() -> dict[str, Any]:
     cfg = load_model_config()
-    try:
-        response = httpx.get(f"{cfg.host.rstrip('/')}/api/tags", timeout=3.0)
-        response.raise_for_status()
-        ollama_state = "online"
-    except httpx.HTTPError:
-        ollama_state = "offline"
-    return {"status": "ok", "ollama": ollama_state, "model": cfg.model,
-            "workspace": str(WORKSPACE), "version": app.version}
+    provider_state = "configured"
+    if cfg.provider == "ollama":
+        try:
+            response = httpx.get(f"{cfg.host.rstrip('/')}/api/tags", timeout=3.0)
+            response.raise_for_status()
+            provider_state = "online"
+        except httpx.HTTPError:
+            provider_state = "offline"
+    return {"status": "ok", "provider": cfg.provider, "provider_state": provider_state,
+            "model": cfg.model, "workspace": str(WORKSPACE), "version": app.version}
 
 
 @app.get("/api/capabilities")
@@ -134,7 +136,7 @@ def capabilities() -> dict[str, Any]:
     if ToolExecutor().web_search_available:
         tools.append("web_search")
     return {
-        "provider": "ollama",
+        "provider": load_model_config().provider,
         "tools": tools,
         "memory": {"persistent": True, "retrieval": "lexical", "vector": False},
         "tasks": {"persistent": True, "background_workers": False,
@@ -148,12 +150,14 @@ def capabilities() -> dict[str, Any]:
 @app.get("/api/models")
 def models() -> dict[str, Any]:
     cfg = load_model_config()
+    if cfg.provider != "ollama":
+        return {"models": [{"name": cfg.model, "provider": cfg.provider, "configured": True}]}
     try:
         response = httpx.get(f"{cfg.host.rstrip('/')}/api/tags", timeout=5.0)
         response.raise_for_status()
         registry = ModelRegistry.from_ollama_payload(response.json())
         return {"models": [{"name": item.name, "size": item.size_bytes,
-                            "modified_at": item.modified_at} for item in registry.list()]}
+                            "modified_at": item.modified_at, "provider": "ollama"} for item in registry.list()]}
     except (httpx.HTTPError, ValueError) as exc:
         raise HTTPException(503, f"Nie można pobrać modeli z Ollama: {exc}") from exc
 
@@ -161,6 +165,9 @@ def models() -> dict[str, Any]:
 @app.get("/api/models/recommend")
 def recommend_model(task: str = "general") -> dict[str, str]:
     cfg = load_model_config()
+    if cfg.provider != "ollama":
+        return {"model": cfg.model, "profile": "configured",
+                "reason": "Automatyczne profilowanie jest obecnie dostępne tylko dla Ollama."}
     try:
         response = httpx.get(f"{cfg.host.rstrip('/')}/api/tags", timeout=5.0)
         response.raise_for_status()
