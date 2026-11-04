@@ -146,6 +146,9 @@ class OpenAICompatibleModel:
             raw_arguments = function.get("arguments", "{}")
             if not isinstance(name, str) or not name:
                 raise RuntimeError("Model zwrócił wywołanie narzędzia bez nazwy.")
+            call_id = item.get("id")
+            if not isinstance(call_id, str) or not call_id:
+                raise RuntimeError("Model zwrócił wywołanie narzędzia bez identyfikatora.")
             if isinstance(raw_arguments, str):
                 try:
                     arguments = json.loads(raw_arguments)
@@ -159,6 +162,6 @@ class OpenAICompatibleModel:
                 raise RuntimeError(
                     f"Argumenty narzędzia {name} nie są obiektem JSON."
                 )
-            calls.append(ModelToolCall(name=name, arguments=arguments, call_id=item.get("id")))
+            calls.append(ModelToolCall(name=name, arguments=arguments, call_id=call_id))
 
         return ModelResponse(content=content, tool_calls=tuple(calls))
