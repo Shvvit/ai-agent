@@ -22,11 +22,19 @@ class WebSearchClient:
 
     @classmethod
     def from_env(cls) -> "WebSearchClient":
+        try:
+            timeout = float(os.getenv("AI_WEB_SEARCH_TIMEOUT", "12"))
+        except ValueError:
+            timeout = 12.0
+        try:
+            max_results = int(os.getenv("AI_WEB_SEARCH_MAX_RESULTS", "5"))
+        except ValueError:
+            max_results = 5
         return cls(
             provider=os.getenv("AI_WEB_SEARCH_PROVIDER", "").strip().lower(),
             api_key=os.getenv("AI_WEB_SEARCH_API_KEY", "").strip(),
-            timeout=float(os.getenv("AI_WEB_SEARCH_TIMEOUT", "12")),
-            max_results=int(os.getenv("AI_WEB_SEARCH_MAX_RESULTS", "5")),
+            timeout=max(1.0, min(timeout, 60.0)),
+            max_results=max(1, min(max_results, 10)),
         )
 
     @property
