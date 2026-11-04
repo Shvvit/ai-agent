@@ -32,10 +32,31 @@ def test_path_traversal_is_blocked(tmp_path, path):
         files.write_file(path, "nie powinno się zapisać")
 
 
+@pytest.mark.parametrize("path", [r"C:\\Windows\\win.ini", r"\\server\\share\\file.txt"])
+def test_windows_absolute_path_is_blocked_on_every_platform(tmp_path, path):
+    files = FileManager(tmp_path / "workspace")
+    with pytest.raises(PermissionError):
+        files.read_file(path)
+
+
 def test_absolute_path_is_blocked(tmp_path):
     files = FileManager(tmp_path / "workspace")
     with pytest.raises(PermissionError):
         files.read_file(str(tmp_path / "outside.txt"))
+
+
+def test_test_runner_blocks_windows_path_traversal(tmp_path):
+    runner = TestRunner(workspace=tmp_path / "workspace")
+    with pytest.raises(PermissionError):
+        runner.run_python(r"..\\outside.py")
+
+
+def test_test_runner_runs_python_file(tmp_path):
+    runner = TestRunner(workspace=tmp_path / "workspace")
+    (runner.workspace / "hello.py").write_text("print('hello')", encoding="utf-8")
+    result = runner.run_python("hello.py")
+    assert result.success
+    assert result.output == "hello"
 
 
 def test_tool_executor_rejects_unknown_tool(tmp_path):
