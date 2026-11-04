@@ -395,7 +395,7 @@ def chat(payload: ChatRequest) -> ChatResponse:
                           "Realizujesz zadania za pomocą dostępnych narzędzi, gdy jest to "
                           "możliwe. Po wykonaniu działania sprawdzasz jego wynik. "
                           "Nie twierdź, że wykonałeś coś, czego nie zrobiłeś. Przy złożonych zadaniach możesz delegować analizę, planowanie, implementację lub recenzję do agenta specjalistycznego.")
-        agent = BaseAgent(model=OllamaModel(config=cfg), history=history,
+        agent = BaseAgent(model=create_model_provider(cfg), history=history,
                           tools=ToolExecutor(file_manager=workspace_files),
                           system_prompt=default_prompt + memory_context)
         answer = agent.run(message)
