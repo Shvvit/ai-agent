@@ -60,7 +60,8 @@ class WebSearchClient:
                     timeout=self.timeout,
                 )
                 response.raise_for_status()
-                raw = response.json().get("results", [])
+                payload = response.json()
+                raw = payload.get("results", []) if isinstance(payload, dict) else []
             else:
                 response = httpx.get(
                     "https://api.search.brave.com/res/v1/web/search",
@@ -70,7 +71,9 @@ class WebSearchClient:
                     timeout=self.timeout,
                 )
                 response.raise_for_status()
-                raw = response.json().get("web", {}).get("results", [])
+                payload = response.json()
+                web_payload = payload.get("web", {}) if isinstance(payload, dict) else {}
+                raw = web_payload.get("results", []) if isinstance(web_payload, dict) else []
         except (httpx.HTTPError, ValueError) as exc:
             raise WebSearchError(f"Dostawca wyszukiwania zwrócił błąd: {exc}") from exc
         results: list[dict[str, str]] = []
