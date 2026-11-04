@@ -20,6 +20,8 @@ from tools.tool_executor import ToolExecutor
 from memory.manager import MemoryManager
 from core.task_manager import TaskManager
 from core.task_state import TaskStatus
+from models.registry import ModelRegistry
+from models.router import ModelRouter
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = Path(os.getenv("AI_DATA_DIR", ROOT / "data")).resolve()
@@ -125,6 +127,19 @@ def models() -> dict[str, Any]:
                             "modified_at": item.get("modified_at")} for item in items]}
     except (httpx.HTTPError, ValueError) as exc:
         raise HTTPException(503, f"Nie można pobrać modeli z Ollama: {exc}") from exc
+
+
+@app.get("/api/models/recommend")
+def recommend_model(task: str = "general") -> dict[str, str]:
+    cfg = ModelConfig.from_env()
+    try:
+        response = httpx.get(f"{cfg.host.rstrip('/')}/api/tags", timeout=5.0)
+        response.raise_for_status()
+        registry = ModelRegistry.from_ollama_payload(response.json())
+    except (httpx.HTTPError, ValueError) as exc:
+        raise HTTPException(503, f"Nie można odczytać modeli Ollama: {exc}") from exc
+    choice = ModelRouter(registry, cfg.model).choose(task)
+    return {"model": choice.model, "profile": choice.profile, "reason": choice.reason}
 
 
 @app.get("/api/memory")
