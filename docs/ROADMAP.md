@@ -4,6 +4,8 @@
 - lokalny adapter Ollama i wywołania narzędzi function-calling,
 - webowy interfejs rozmowy po polsku,
 - lokalna historia SQLite,
+- trwała pamięć faktów SQLite: ręczne dodawanie, wyszukiwanie kontekstowe, usuwanie pojedynczych wpisów i czyszczenie pamięci,
+- panel zarządzania pamięcią w ustawieniach,
 - odczyt/zapis plików w workspace,
 - uruchamianie skryptów Python z limitem czasu,
 - podstawowe planowanie i weryfikacja wybranych rezultatów,
@@ -11,7 +13,7 @@
 - CI dla Python 3.12 i 3.13.
 
 ## Wymaga dalszej implementacji
-- pamięć semantyczna i trwałe profile użytkownika,
+- pamięć semantyczna/wektorowa, automatyczne wydobywanie faktów i trwałe profile użytkownika,
 - wieloagentowe delegowanie i koordynator,
 - routing i benchmark modeli lokalnych/zewnętrznych,
 - wyszukiwanie WWW i przeglądarka z kontrolą zgód,
