@@ -29,9 +29,14 @@ def test_task_state_transitions_are_enforced(tmp_path):
     with pytest.raises(ValueError):
         manager.complete(task.id, "nie można zakończyć przed startem")
     manager.start(task.id)
-    manager.cancel(task.id)
     with pytest.raises(ValueError):
-        manager.complete(task.id, "anulowane zadanie nie może się zakończyć")
+        manager.cancel(task.id)
+    manager.complete(task.id, "zadanie zakończone")
+
+    queued = manager.create("Zadanie do anulowania")
+    manager.cancel(queued.id)
+    with pytest.raises(ValueError):
+        manager.start(queued.id)
 
 
 def test_task_validation_and_missing_ids(tmp_path):
