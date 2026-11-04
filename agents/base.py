@@ -174,7 +174,10 @@ class BaseAgent:
             {"role": "user", "content": task},
         ]
 
-        for _ in range(self.max_tool_calls + 1):
+        tool_call_limit = max(0, self.max_tool_calls)
+        tool_calls_used = 0
+
+        for _ in range(tool_call_limit + 1):
             response = self.model.chat(messages, tools=self._tool_definitions())
             if not response.tool_calls:
                 answer = response.content
@@ -207,13 +210,20 @@ class BaseAgent:
             for call in response.tool_calls:
                 name = call.name
                 arguments = call.arguments
-                try:
-                    if name == "delegate_task":
-                        result = self._delegate(arguments)
-                    else:
-                        result = self.tools.execute(name, arguments)
-                except Exception as exc:
-                    result = f"Błąd narzędzia: {type(exc).__name__}: {exc}"
+                if tool_calls_used >= tool_call_limit:
+                    result = (
+                        "Nie wykonano narzędzia: osiągnięto limit łącznej liczby "
+                        "wywołań narzędzi dla tego zadania."
+                    )
+                else:
+                    tool_calls_used += 1
+                    try:
+                        if name == "delegate_task":
+                            result = self._delegate(arguments)
+                        else:
+                            result = self.tools.execute(name, arguments)
+                    except Exception as exc:
+                        result = f"Błąd narzędzia: {type(exc).__name__}: {exc}"
 
                 tool_message = {"role": "tool", "content": result, "tool_name": name}
                 if call.call_id:
