@@ -140,6 +140,19 @@ class BaseAgent:
                     },
                 },
             })
+        if self.tools.web_search_available:
+            definitions.append({
+                "type": "function",
+                "function": {
+                    "name": "web_search",
+                    "description": "Wyszukuje aktualne informacje w Internecie i zwraca tytuły, adresy oraz krótkie fragmenty wyników.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"query": {"type": "string", "description": "Zapytanie do wyszukiwarki."}},
+                        "required": ["query"],
+                    },
+                },
+            })
         return definitions
 
     def _delegate(self, arguments: dict) -> str:
