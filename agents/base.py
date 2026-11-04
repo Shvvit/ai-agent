@@ -1,24 +1,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Any
 
 import ollama
 
 from config.model_config import ModelConfig
+from models.providers import ModelCapabilities, ModelProvider, ModelResponse, ModelToolCall
 from tools.tool_executor import ToolExecutor
-
-
-class LanguageModel(Protocol):
-    """Interfejs umożliwiający podłączanie różnych modeli AI."""
-
-    def generate(self, messages: list[dict[str, str]]) -> str:
-        ...
 
 
 @dataclass
 class OllamaModel:
-    """Adapter do lokalnych modeli Ollama."""
+    """Adapter Ollama tłumaczący SDK dostawcy na wspólny kontrakt modeli."""
 
     config: ModelConfig = field(default_factory=ModelConfig.from_env)
 
@@ -27,24 +21,55 @@ class OllamaModel:
         return self.config.model
 
     @property
+    def provider_name(self) -> str:
+        return "ollama"
+
+    @property
     def host(self) -> str:
         return self.config.host
 
-    def generate(self, messages: list[dict[str, str]]) -> str:
+    @property
+    def capabilities(self) -> ModelCapabilities:
+        return ModelCapabilities(tool_calling=True)
+
+    def generate(self, messages: list[dict[str, Any]]) -> str:
+        return self.chat(messages).content
+
+    def chat(
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+    ) -> ModelResponse:
         client = ollama.Client(host=self.config.host)
         response = client.chat(
             model=self.config.model,
             messages=messages,
+            tools=tools or [],
             options={"temperature": self.config.temperature},
         )
-        return response.message.content or ""
+        message = response.message
+        calls: list[ModelToolCall] = []
+        for call in message.tool_calls or []:
+            arguments = call.function.arguments or {}
+            if not isinstance(arguments, dict):
+                arguments = {}
+            calls.append(
+                ModelToolCall(
+                    name=str(call.function.name),
+                    arguments=arguments,
+                )
+            )
+        return ModelResponse(
+            content=message.content or "",
+            tool_calls=tuple(calls),
+        )
 
 
 @dataclass
 class BaseAgent:
     """Agent z historią rozmowy i narzędziami do pracy z plikami."""
 
-    model: LanguageModel = field(default_factory=OllamaModel)
+    model: ModelProvider = field(default_factory=OllamaModel)
     system_prompt: str = (
         "Jesteś agentem Własne AI. Odpowiadasz po polsku. "
         "Realizujesz zadania za pomocą dostępnych narzędzi, gdy jest to "
@@ -201,22 +226,6 @@ class BaseAgent:
         if not task:
             raise ValueError("Zadanie nie może być puste.")
 
-        if not isinstance(self.model, OllamaModel):
-            messages = [
-                {"role": "system", "content": self.system_prompt},
-                *self.history,
-                {"role": "user", "content": task},
-            ]
-            answer = self.model.generate(messages)
-            self.history.extend(
-                [
-                    {"role": "user", "content": task},
-                    {"role": "assistant", "content": answer},
-                ]
-            )
-            return answer
-
-        client = ollama.Client(host=self.model.config.host)
         messages = [
             {"role": "system", "content": self.system_prompt},
             *self.history,
@@ -224,16 +233,9 @@ class BaseAgent:
         ]
 
         for _ in range(self.max_tool_calls + 1):
-            response = client.chat(
-                model=self.model.config.model,
-                messages=messages,
-                tools=self._tool_definitions(),
-                options={"temperature": self.model.config.temperature},
-            )
-            message = response.message
-
-            if not message.tool_calls:
-                answer = message.content or ""
+            response = self.model.chat(messages, tools=self._tool_definitions())
+            if not response.tool_calls:
+                answer = response.content
                 self.history.extend(
                     [
                         {"role": "user", "content": task},
@@ -242,11 +244,26 @@ class BaseAgent:
                 )
                 return answer
 
-            messages.append(message)
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": response.content,
+                    "tool_calls": [
+                        {
+                            "type": "function",
+                            "function": {
+                                "name": call.name,
+                                "arguments": call.arguments,
+                            },
+                        }
+                        for call in response.tool_calls
+                    ],
+                }
+            )
 
-            for call in message.tool_calls:
-                name = call.function.name
-                arguments = call.function.arguments
+            for call in response.tool_calls:
+                name = call.name
+                arguments = call.arguments
 
                 try:
                     if name == "delegate_task":
