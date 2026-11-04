@@ -33,9 +33,9 @@ class CommandGuard:
             }
             if tuple(args[1:]) in allowed:
                 return
-            if (len(args) == 4 and args[1:] [:2] == ["log", "--oneline"]
-                    and args[3].isdigit() and 1 <= int(args[3]) <= 20
-                    and args[2] == "-n"):
+            if (len(args) == 5 and args[1:3] == ["log", "--oneline"]
+                    and args[3] == "-n" and args[4].isdigit()
+                    and 1 <= int(args[4]) <= 20):
                 return
         elif args[0] in {"ollama", "ollama.exe"}:
             if args[1:] in (["list"], ["ps"]):
