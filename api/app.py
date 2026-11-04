@@ -20,6 +20,8 @@ from tools.tool_executor import ToolExecutor
 from memory.manager import MemoryManager
 from core.task_manager import TaskManager
 from core.task_state import TaskStatus
+from core.engine import AgentEngine
+from core.verifier import Verifier
 from models.registry import ModelRegistry
 from models.router import ModelRouter
 
@@ -257,15 +259,23 @@ def execute_task(task_id: str) -> dict[str, Any]:
                 "Sprawdź rezultat i uczciwie opisz ograniczenia. Odpowiadaj po polsku."
             ),
         )
-        answer = agent.run(task.description)
-        finished = manager.complete(task_id, answer or "Model zwrócił pustą odpowiedź.")
+        outcome = AgentEngine(agent=agent, verifier=Verifier(WORKSPACE)).run(task.description)
+        result_text = (
+            f"PLAN:\\n{outcome.plan}\\n\\nWYNIK:\\n{outcome.answer}"
+            f"\\n\\nWERYFIKACJA: {outcome.verification}"
+            f"\\nAUTOMATYCZNIE ZWERYFIKOWANO: {'tak' if outcome.verified else 'nie'}"
+        )
+        if outcome.success:
+            finished = manager.complete(task_id, result_text)
+        else:
+            finished = manager.fail(task_id, result_text)
     except Exception as exc:
         try:
             manager.fail(task_id, f"{type(exc).__name__}: {exc}")
         except (KeyError, ValueError):
             pass
         raise HTTPException(503, f"Nie udało się wykonać zadania: {type(exc).__name__}: {exc}") from exc
-    return {"task": finished.__dict__ | {"status": finished.status.value}, "model": cfg.model}
+    return {"task": finished.__dict__ | {"status": finished.status.value}, "model": cfg.model, "verified": outcome.verified, "success": outcome.success}
 
 
 @app.post("/api/chat", response_model=ChatResponse)
