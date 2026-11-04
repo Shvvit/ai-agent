@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path, PureWindowsPath
 
@@ -16,11 +17,13 @@ class TestResult:
 class TestRunner:
     __test__ = False  # Prevent pytest from treating this helper as a test class.
 
-    """Uruchamia testy Pythona wyłącznie w katalogu workspace."""
+    """Uruchamia skrypty Python w workspace z timeoutem i limitem przechwyconego wyjścia."""
 
-    def __init__(self, workspace: str | Path = "workspace", timeout: int = 30) -> None:
+    def __init__(self, workspace: str | Path = "workspace", timeout: int = 30,
+                 max_output_bytes: int = 1_000_000) -> None:
         self.workspace = Path(workspace).resolve()
-        self.timeout = timeout
+        self.timeout = max(1, min(int(timeout), 300))
+        self.max_output_bytes = max(1024, min(int(max_output_bytes), 5_000_000))
         self.workspace.mkdir(parents=True, exist_ok=True)
 
     def run_python(self, relative_path: str) -> TestResult:
@@ -29,7 +32,7 @@ class TestRunner:
         windows_path = PureWindowsPath(relative_path)
         if Path(relative_path).is_absolute() or windows_path.is_absolute() or windows_path.drive:
             raise PermissionError("Nie wolno uruchamiać plików spoza workspace.")
-        relative = Path(relative_path.replace("\\", "/"))
+        relative = Path(relative_path.replace("\\\\", "/"))
         if ".." in relative.parts:
             raise PermissionError("Nie wolno uruchamiać plików spoza workspace.")
         script = (self.workspace / relative).resolve()
@@ -42,13 +45,28 @@ class TestRunner:
                 raise PermissionError("Nie wolno uruchamiać plików przez dowiązania symboliczne.")
         if not script.is_file() or script.suffix.lower() != ".py":
             raise ValueError("Podaj istniejący plik .py w workspace.")
-        try:
-            result = subprocess.run(
+        with tempfile.TemporaryFile() as stdout_file, tempfile.TemporaryFile() as stderr_file:
+            process = subprocess.Popen(
                 [sys.executable, "-I", str(script)],
-                cwd=self.workspace, capture_output=True, text=True,
-                timeout=self.timeout, check=False,
+                cwd=self.workspace, stdout=stdout_file, stderr=stderr_file,
+                stdin=subprocess.DEVNULL, shell=False,
             )
-            output = (result.stdout + "\n" + result.stderr).strip()
-            return TestResult(result.returncode == 0, result.returncode, output)
-        except subprocess.TimeoutExpired:
-            return TestResult(False, -1, f"Test przekroczył limit {self.timeout} s.")
+            timed_out = False
+            try:
+                return_code = process.wait(timeout=self.timeout)
+            except subprocess.TimeoutExpired:
+                timed_out = True
+                process.kill()
+                return_code = process.wait()
+            stdout_file.seek(0)
+            stderr_file.seek(0)
+            stdout = stdout_file.read(self.max_output_bytes + 1)
+            stderr = stderr_file.read(self.max_output_bytes + 1)
+        truncated = len(stdout) > self.max_output_bytes or len(stderr) > self.max_output_bytes
+        output = (stdout[:self.max_output_bytes].decode("utf-8", errors="replace")
+                  + "\\n" + stderr[:self.max_output_bytes].decode("utf-8", errors="replace")).strip()
+        if truncated:
+            output += "\\n[Wynik skrócony do limitu.]"
+        if timed_out:
+            return TestResult(False, -1, f"Test przekroczył limit {self.timeout} s.\\n{output}".strip())
+        return TestResult(return_code == 0, return_code, output)
