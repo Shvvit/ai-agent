@@ -121,6 +121,8 @@ def test_memory_slash_commands(monkeypatch, tmp_path):
         listed = client.post("/api/chat", json={"message": "/memory"})
         assert listed.status_code == 200
         assert "I use Qwen locally" in listed.json()["answer"]
+        assert "\\n" not in listed.json()["answer"]
+        assert "\n" in listed.json()["answer"]
 
         cleared = client.post("/api/chat", json={"message": "/clear_memory"})
         assert cleared.status_code == 200
