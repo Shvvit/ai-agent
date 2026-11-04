@@ -32,7 +32,7 @@ class TestRunner:
         windows_path = PureWindowsPath(relative_path)
         if Path(relative_path).is_absolute() or windows_path.is_absolute() or windows_path.drive:
             raise PermissionError("Nie wolno uruchamiać plików spoza workspace.")
-        relative = Path(relative_path.replace("\\\\", "/"))
+        relative = Path(relative_path.replace("\\", "/"))
         if ".." in relative.parts:
             raise PermissionError("Nie wolno uruchamiać plików spoza workspace.")
         script = (self.workspace / relative).resolve()
@@ -64,9 +64,9 @@ class TestRunner:
             stderr = stderr_file.read(self.max_output_bytes + 1)
         truncated = len(stdout) > self.max_output_bytes or len(stderr) > self.max_output_bytes
         output = (stdout[:self.max_output_bytes].decode("utf-8", errors="replace")
-                  + "\\n" + stderr[:self.max_output_bytes].decode("utf-8", errors="replace")).strip()
+                  + "\n" + stderr[:self.max_output_bytes].decode("utf-8", errors="replace")).strip()
         if truncated:
-            output += "\\n[Wynik skrócony do limitu.]"
+            output += "\n[Wynik skrócony do limitu.]"
         if timed_out:
-            return TestResult(False, -1, f"Test przekroczył limit {self.timeout} s.\\n{output}".strip())
+            return TestResult(False, -1, f"Test przekroczył limit {self.timeout} s.\n{output}".strip())
         return TestResult(return_code == 0, return_code, output)
