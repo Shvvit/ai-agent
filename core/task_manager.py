@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import sqlite3
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
 from threading import RLock
+from typing import Iterator
 
 from core.task_state import TaskRecord, TaskStatus, utc_now
 
@@ -19,11 +21,19 @@ class TaskManager:
         self._lock = RLock()
         self._initialize()
 
-    def _connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
         db = sqlite3.connect(self.database, timeout=10)
         db.row_factory = sqlite3.Row
-        db.execute("PRAGMA foreign_keys=ON")
-        return db
+        try:
+            db.execute("PRAGMA foreign_keys=ON")
+            yield db
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
 
     def _initialize(self) -> None:
         with self._lock, self._connect() as db:
