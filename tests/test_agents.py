@@ -52,3 +52,38 @@ def test_specialist_cannot_delegate_recursively():
     agent = BaseAgent(model=FakeModel(), allow_delegation=False)
     with pytest.raises(ValueError, match="Zagnieżdżone"):
         agent._delegate({"role": "analyst", "task": "test"})
+
+
+def test_ollama_agent_executes_specialist_delegation(monkeypatch):
+    from types import SimpleNamespace
+
+    import agents.base as base_module
+    from config.model_config import ModelConfig
+
+    calls = []
+
+    class FakeClient:
+        def chat(self, **kwargs):
+            calls.append(kwargs)
+            if len(calls) == 1:
+                tool_call = SimpleNamespace(function=SimpleNamespace(
+                    name="delegate_task",
+                    arguments={"role": "analyst", "task": "Przeanalizuj ryzyko."},
+                ))
+                return SimpleNamespace(message=SimpleNamespace(tool_calls=[tool_call], content=""))
+            if len(calls) == 2:
+                return SimpleNamespace(message=SimpleNamespace(tool_calls=[], content="Analiza gotowa."))
+            return SimpleNamespace(message=SimpleNamespace(tool_calls=[], content="Wynik końcowy."))
+
+    monkeypatch.setattr(base_module.ollama, "Client", lambda **kwargs: FakeClient())
+    agent = BaseAgent(model=base_module.OllamaModel(config=ModelConfig()))
+    assert agent.run("Zbadaj ryzyko.") == "Wynik końcowy."
+    assert len(calls) == 3
+    assert any(
+        tool["function"]["name"] == "delegate_task"
+        for tool in calls[0]["tools"]
+    )
+    assert all(
+        tool["function"]["name"] != "delegate_task"
+        for tool in calls[1]["tools"]
+    )
