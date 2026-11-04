@@ -118,9 +118,8 @@ class TaskManager:
         now = utc_now()
         with self._lock, self._connect() as db:
             cursor = db.execute(
-                "UPDATE tasks SET status=?, updated_at=?, finished_at=? WHERE id=? AND status IN (?,?)",
-                (TaskStatus.CANCELLED.value, now, now, task_id,
-                 TaskStatus.PENDING.value, TaskStatus.RUNNING.value),
+                "UPDATE tasks SET status=?, updated_at=?, finished_at=? WHERE id=? AND status=?",
+                (TaskStatus.CANCELLED.value, now, now, task_id, TaskStatus.PENDING.value),
             )
             if cursor.rowcount != 1:
                 self._raise_transition_error(db, task_id, "anulować")
