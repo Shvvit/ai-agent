@@ -24,8 +24,11 @@ def main() -> int:
     try:
         response = httpx.get(f"{host}/api/tags", timeout=2.0)
         response.raise_for_status()
+        payload = response.json()
+        if not isinstance(payload, dict):
+            raise ValueError("Nieprawidłowa odpowiedź Ollama.")
         installed = {
-            item.get("name", "") for item in response.json().get("models", [])
+            item.get("name", "") for item in payload.get("models", [])
             if isinstance(item, dict)
         }
         print(f"Serwer Ollama: online ({host})")
