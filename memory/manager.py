@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import re
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 
 class MemoryManager:
@@ -15,10 +16,18 @@ class MemoryManager:
         self.max_items = max(1, int(max_items))
         self._init_db()
 
-    def _connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
         db = sqlite3.connect(self.db_path, timeout=10)
         db.row_factory = sqlite3.Row
-        return db
+        try:
+            yield db
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
 
     def _init_db(self) -> None:
         with self._connect() as db:
