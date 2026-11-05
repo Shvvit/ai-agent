@@ -47,7 +47,7 @@ class ModelRouter:
         """Wybiera pierwszy pasujący profil; kolejność jest celowo deterministyczna."""
         text = task.casefold()
         for profile, (_, keywords) in cls._PROFILES.items():
-            if any(re.search(r"\\b" + re.escape(word), text) for word in keywords):
+            if any(re.search(r"\b" + re.escape(word), text) for word in keywords):
                 return profile
         return "default"
 
