@@ -33,6 +33,7 @@ def test_model_config_rejects_empty_model(monkeypatch):
     with pytest.raises(ValueError):
         ModelConfig.from_env()
 
+
 @pytest.mark.parametrize("host", [
     "http://127.0.0.1:invalid",
     "http://127.0.0.1:65536",
