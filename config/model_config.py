@@ -4,6 +4,15 @@ import os
 from dataclasses import dataclass, field
 from urllib.parse import urlsplit
 
+def _validate_url_port(parsed, setting: str) -> None:
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError(f"{setting} zawiera nieprawidłowy port.") from exc
+    if port is not None and not 1 <= port <= 65535:
+        raise ValueError(f"{setting} musi używać portu z zakresu 1–65535.")
+
+
 
 @dataclass(frozen=True)
 class ModelConfig:
@@ -36,6 +45,7 @@ class ModelConfig:
             raise ValueError("AI_MODEL musi mieć od 1 do 256 znaków i nie może zawierać nowych linii.")
 
         parsed_host = urlsplit(host)
+        _validate_url_port(parsed_host, "AI_HOST")
         if parsed_host.scheme not in {"http", "https"} or not parsed_host.hostname:
             raise ValueError("AI_HOST musi być poprawnym adresem HTTP lub HTTPS.")
         if (parsed_host.username or parsed_host.password or parsed_host.query
@@ -44,6 +54,7 @@ class ModelConfig:
             raise ValueError("AI_HOST nie może zawierać ścieżki, danych logowania, query ani białych znaków.")
 
         parsed_base = urlsplit(base_url)
+        _validate_url_port(parsed_base, "AI_BASE_URL")
         if parsed_base.scheme not in {"http", "https"} or not parsed_base.hostname:
             raise ValueError("AI_BASE_URL musi być poprawnym adresem HTTP lub HTTPS.")
         if (parsed_base.username or parsed_base.password or parsed_base.query
