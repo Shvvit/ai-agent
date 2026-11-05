@@ -16,6 +16,7 @@ class TaskResult:
     success: bool
     verification: str
     attempts: int = 0
+    verified: bool = False
 
 
 @dataclass
@@ -42,13 +43,14 @@ class AgentEngine:
         relative_path = self._requested_file_path(task)
         if relative_path is None:
             return TaskResult(
-                task=task, plan=plan, answer=answer, success=False,
-                verification="Nie określono pliku, którego istnienie można automatycznie sprawdzić.",
+                task=task, plan=plan, answer=answer, success=bool(answer.strip()),
+                verification="Zadanie wykonane przez model, ale nie ma automatycznego kryterium weryfikacji.",
+                verified=False,
             )
 
         file_result = self.verifier.file_exists(relative_path)
         if not file_result.success:
-            return TaskResult(task, plan, answer, False, file_result.message)
+            return TaskResult(task, plan, answer, False, file_result.message, verified=False)
 
         if relative_path.endswith(".py"):
             file_manager = self.agent.tools.files
@@ -61,7 +63,7 @@ class AgentEngine:
                     return TaskResult(
                         task, plan, answer, True,
                         f"Program uruchomił się poprawnie. Wynik: {result.output or '(brak wyjścia)'}",
-                        attempts=attempt,
+                        attempts=attempt, verified=True,
                     )
                 if attempt == self.max_repair_attempts:
                     break
@@ -73,10 +75,10 @@ class AgentEngine:
             return TaskResult(
                 task, plan, answer, False,
                 f"Program nadal nie przechodzi testu:\n{last_output}",
-                attempts=self.max_repair_attempts,
+                attempts=self.max_repair_attempts, verified=False,
             )
 
-        return TaskResult(task, plan, answer, True, file_result.message)
+        return TaskResult(task, plan, answer, True, file_result.message, verified=True)
 
     @staticmethod
     def _requested_file_path(task: str) -> str | None:
