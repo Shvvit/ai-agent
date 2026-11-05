@@ -85,6 +85,16 @@ To nie jest jeszcze odpowiednik pełnego komercyjnego agenta. Pamięć semantycz
 
 Panel zadań jest dostępny w ustawieniach interfejsu. Zadania są trwale zapisywane w SQLite. API modeli: `GET /api/models/recommend?task=...` dobiera skonfigurowany model profilu, jeśli jest zainstalowany; w przeciwnym razie używa modelu domyślnego lub najmniejszego dostępnego. To routing regułowy, nie benchmark wydajności.
 
+### Benchmark lokalnych modeli
+
+Aby porównać szybkość i pamięć modeli zainstalowanych w Ollama, uruchom:
+
+```powershell
+python scripts/benchmark_models.py --models qwen3:8b,qwen3:4b
+```
+
+Skrypt działa sekwencyjnie, mierzy czas ładowania, tokeny/s oraz pamięć RAM/VRAM i zapisuje raport JSON. Szczegóły i opcje: [docs/MODELS.md](docs/MODELS.md#lokalny-benchmark-ollama).
+
 API: `POST /api/tasks` (utworzenie), `GET /api/tasks` (lista), `GET /api/tasks/{id}` (szczegóły), `POST /api/tasks/{id}/execute` (synchroniczne wykonanie przez skonfigurowanego dostawcę modelu), `POST /api/tasks/{id}/cancel` (anulowanie zadania oczekującego). Aktywnego wywołania modelu nie można jeszcze przerwać; anulowanie działa wyłącznie przed rozpoczęciem. Wykonywanie zadania blokuje żądanie do zakończenia modelu.
 
 ## Pamięć agenta
