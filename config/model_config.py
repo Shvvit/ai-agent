@@ -4,6 +4,7 @@ import os
 from dataclasses import dataclass, field
 from urllib.parse import urlsplit
 
+
 def _validate_url_port(parsed, setting: str) -> None:
     try:
         port = parsed.port
@@ -11,7 +12,6 @@ def _validate_url_port(parsed, setting: str) -> None:
         raise ValueError(f"{setting} zawiera nieprawidłowy port.") from exc
     if port is not None and not 1 <= port <= 65535:
         raise ValueError(f"{setting} musi używać portu z zakresu 1–65535.")
-
 
 
 @dataclass(frozen=True)
