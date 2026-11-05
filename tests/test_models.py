@@ -45,3 +45,37 @@ def test_registry_rejects_non_object_payload():
 
     with pytest.raises(ValueError):
         ModelRegistry.from_ollama_payload([])
+
+def test_router_uses_default_profile_for_blank_task():
+    registry = ModelRegistry.from_ollama_payload({"models": [
+        {"name": "qwen3:8b", "size": 8},
+        {"name": "coder", "size": 7},
+    ]})
+    router = ModelRouter(registry, "qwen3:8b", {"coding": "coder"})
+    choice = router.choose("   ")
+    assert choice.model == "qwen3:8b"
+    assert choice.profile == "default"
+
+
+def test_router_rejects_non_text_task():
+    import pytest
+
+    registry = ModelRegistry.from_ollama_payload({"models": [{"name": "qwen3:8b"}]})
+    router = ModelRouter(registry, "qwen3:8b", {})
+    with pytest.raises(TypeError, match="musi być tekstem"):
+        router.choose(None)
+
+
+def test_router_ignores_invalid_profile_configuration():
+    registry = ModelRegistry.from_ollama_payload({"models": [
+        {"name": "qwen3:8b", "size": 8},
+        {"name": "coder", "size": 7},
+    ]})
+    router = ModelRouter(
+        registry,
+        "qwen3:8b",
+        {"coding": None, "unknown": "coder", "reasoning": "  "},
+    )
+    choice = router.choose("Napisz program w Pythonie")
+    assert choice.model == "qwen3:8b"
+    assert choice.profile == "coding"
