@@ -20,7 +20,11 @@ Modułowy agent AI dla Windows 10/11 i Linux. Domyślnie używa lokalnej Ollama 
 
 ## Instalacja
 
-Wymagany Python 3.12 lub 3.13. Ollama jest potrzebna dla domyślnego dostawcy lokalnego; można też skonfigurować endpoint zgodny z OpenAI Chat Completions.
+**Windows 10/11 — instalator EXE (zalecane):** pobierz artefakt `Setup-WlasneAI.exe` z najnowszego uruchomienia workflow [Windows installer](https://github.com/Shvvit/ai-agent/actions/workflows/windows-installer.yml) (sekcja Artifacts). Uruchom instalator. Automatycznie instaluje Python 3.12, Ollama, zależności aplikacji i model `qwen3:8b`, tworzy skrót na pulpicie i uruchamia panel. Wymaga połączenia z internetem, Windows Package Manager (`winget`) i kilku GB na model. Aplikacja trafia do profilu użytkownika; instalacja nie wymaga uprawnień administratora.
+
+Instalator pobiera model osobno — plik EXE nie zawiera kilku gigabajtów wag modelu. Jeśli pobieranie modelu zostanie przerwane, dokończ je poleceniem `ollama pull qwen3:8b`.
+
+**Instalacja ręczna:** wymagany Python 3.12 lub 3.13. Ollama jest potrzebna dla domyślnego dostawcy lokalnego; można też skonfigurować endpoint zgodny z OpenAI Chat Completions.
 
 **Windows 10/11 (PowerShell):**
 ```powershell
