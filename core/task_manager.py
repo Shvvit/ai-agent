@@ -99,6 +99,8 @@ class TaskManager:
             raise ValueError("Opis zadania nie może być pusty.")
         if len(description) > 20000:
             raise ValueError("Opis zadania przekracza limit 20000 znaków.")
+        if title is not None and not isinstance(title, str):
+            raise ValueError("Tytuł zadania musi być tekstem.")
         normalized_title = (title or description.strip().splitlines()[0][:100]).strip()
         if not normalized_title:
             normalized_title = "Nowe zadanie"
@@ -157,8 +159,10 @@ class TaskManager:
             current = TaskStatus(row["status"])
             if new_status not in self.TRANSITIONS[current]:
                 raise ValueError(f"Niedozwolona zmiana statusu: {current.value} -> {new_status.value}.")
-            if attempts is not None and attempts < 0:
-                raise ValueError("Liczba prób nie może być ujemna.")
+            if attempts is not None and (
+                not isinstance(attempts, int) or attempts < 0
+            ):
+                raise ValueError("Liczba prób musi być nieujemną liczbą całkowitą.")
             self._db.execute(
                 """UPDATE tasks SET status=?, plan=?, result=?, error=?, attempts=?, updated_at=?
                 WHERE id=?""",
