@@ -88,7 +88,13 @@ class AgentEngine:
             test_runner = self.agent.tools.tests
             last_output = ""
             for attempt in range(self.max_repair_attempts + 1):
-                result = test_runner.run_python(relative_path)
+                try:
+                    result = test_runner.run_python(relative_path)
+                except PermissionError as exc:
+                    return TaskResult(
+                        task, plan, answer, False, str(exc),
+                        attempts=attempt, verified=False,
+                    )
                 last_output = result.output
                 if result.success:
                     return TaskResult(
