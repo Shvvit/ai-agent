@@ -2,13 +2,16 @@ from __future__ import annotations
 
 from agents.base import BaseAgent
 from core.engine import AgentEngine
+from memory.manager import MemoryManager
 
 
 class FakeTextModel:
     def __init__(self, answers):
         self.answers = iter(answers)
+        self.user_prompts = []
 
     def generate(self, messages):
+        self.user_prompts.append(messages[-1]["content"])
         return next(self.answers)
 
 
@@ -46,3 +49,19 @@ def test_python_file_task_is_verified(tmp_path):
     assert result.success is True
     assert result.verified is True
     assert result.attempts == 0
+
+
+def test_relevant_long_term_memory_is_added_to_planning_and_execution(tmp_path):
+    memory = MemoryManager(tmp_path / "memory.sqlite3")
+    memory.remember(
+        "Użytkownik rozwija agenta AI z lokalnym Qwen3 i Ollama",
+        category="project",
+    )
+    model = FakeTextModel(["Plan z kontekstem", "Odpowiedź z kontekstem"])
+    agent = BaseAgent(model=model)
+    engine = AgentEngine(agent=agent, memory=memory)
+    result = engine.run("Pomóż rozwinąć projekt agenta AI")
+    assert result.success is True
+    assert "Qwen3" in model.user_prompts[0]
+    assert "Qwen3" in model.user_prompts[1]
+    memory.close()
