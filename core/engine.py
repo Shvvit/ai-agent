@@ -52,6 +52,9 @@ class AgentEngine:
             raise ValueError("Zadanie nie może być puste.")
         task = task.strip()
         record = self.task_manager.create(task) if self.task_manager else None
+        return self._execute_tracked(task, record)
+
+    def _execute_tracked(self, task: str, record) -> TaskResult:
         if record is not None:
             self.task_manager.transition(record.id, "running")
         try:
@@ -73,6 +76,21 @@ class AgentEngine:
             )
             result.task_id = record.id
         return result
+
+    def retry(self, task_id: str) -> TaskResult:
+        """Re-run a failed, paused or cancelled task from its original request."""
+        if self.task_manager is None:
+            raise RuntimeError("Retry wymaga skonfigurowanego TaskManager.")
+        record = self.task_manager.get(task_id)
+        if record is None:
+            raise KeyError(f"Nie znaleziono zadania {task_id}.")
+        if record.status.value in {"failed", "paused", "cancelled"}:
+            record = self.task_manager.transition(record.id, "queued")
+        elif record.status.value != "queued":
+            raise ValueError(
+                f"Nie można ponowić zadania ze statusem {record.status.value}."
+            )
+        return self._execute_tracked(record.description, record)
 
     def _execute(self, task: str) -> TaskResult:
         if not isinstance(task, str) or not task.strip():
