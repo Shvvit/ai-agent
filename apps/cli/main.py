@@ -10,7 +10,7 @@ def main() -> None:
     print("=" * 48)
     print("WŁASNE AI — agent w terminalu")
     print("Wpisz zadanie i naciśnij Enter.")
-    print("Komendy: /help, /remember, /memory, /search, /forget, /tasks, /task, /clear, /exit")
+    print("Komendy: /help, /remember, /memory, /search, /forget, /tasks, /task, /retry, /clear, /exit")
     print("=" * 48)
 
     memory = MemoryManager()
@@ -91,6 +91,17 @@ def main() -> None:
                     print(f"ID: {record.id}\nStatus: {record.status.value}\nTytuł: {record.title}")
                     print(f"Opis: {record.description}\nPlan: {record.plan}")
                     print(f"Wynik: {record.result}\nBłąd: {record.error}")
+                continue
+            if task.startswith("/retry "):
+                task_id = task[len("/retry "):].strip()
+                try:
+                    result = engine.retry(task_id)
+                    print(f"Ponowiono zadanie {result.task_id}.")
+                    print(f"\\nOdpowiedź:\\n{result.answer}")
+                    print(f"Weryfikacja: {result.verification}")
+                    print("Status: " + ("SUKCES" if result.success else "NIEPOTWIERDZONE"))
+                except (KeyError, ValueError, RuntimeError) as exc:
+                    print(f"Nie można ponowić zadania: {exc}")
                 continue
             if command == "/clear":
                 engine.agent.history.clear()
