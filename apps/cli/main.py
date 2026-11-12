@@ -97,7 +97,7 @@ def main() -> None:
                 try:
                     result = engine.retry(task_id)
                     print(f"Ponowiono zadanie {result.task_id}.")
-                    print(f"\\nOdpowiedź:\\n{result.answer}")
+                    print(f"\nOdpowiedź:\n{result.answer}")
                     print(f"Weryfikacja: {result.verification}")
                     print("Status: " + ("SUKCES" if result.success else "NIEPOTWIERDZONE"))
                 except (KeyError, ValueError, RuntimeError) as exc:
