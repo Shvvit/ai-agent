@@ -133,10 +133,10 @@ class BaseAgent:
             },
         ]
 
-    def _request(self, messages: list[dict[str, Any]]) -> ChatResult:
+    def _request(self, messages: list[dict[str, Any]], *, allow_tools: bool = True) -> ChatResult:
         chat = getattr(self.model, "chat", None)
         if callable(chat):
-            result = chat(messages, self._tool_definitions())
+            result = chat(messages, self._tool_definitions() if allow_tools else [])
             if isinstance(result, ChatResult):
                 return result
             raise TypeError("Model.chat musi zwracać models.chat.ChatResult.")
@@ -193,23 +193,22 @@ class BaseAgent:
                     }
                 )
 
+            limit_reached = False
+            is_ollama = (
+                getattr(getattr(self.model, "config", None), "provider", None) == "ollama"
+            )
             for call in result.tool_calls:
                 if calls_executed >= self.max_tool_calls:
-                    messages.append(
-                        {
-                            "role": "user",
-                            "content": "Osiągnięto limit wywołań narzędzi. Zakończ odpowiedź na podstawie dotychczasowych wyników.",
-                        }
-                    )
-                    break
+                    output = "Zablokowano: osiągnięto limit wywołań narzędzi dla tego zadania."
+                    limit_reached = True
+                else:
+                    try:
+                        output = self.tools.execute(call.name, call.arguments)
+                    except Exception as exc:
+                        output = f"Błąd narzędzia: {type(exc).__name__}: {exc}"
+                    calls_executed += 1
 
-                try:
-                    output = self.tools.execute(call.name, call.arguments)
-                except Exception as exc:
-                    output = f"Błąd narzędzia: {type(exc).__name__}: {exc}"
-                calls_executed += 1
-
-                if getattr(self.model, "config", None) and self.model.config.provider == "ollama":
+                if is_ollama:
                     messages.append(
                         {"role": "tool", "tool_name": call.name, "content": output}
                     )
@@ -223,10 +222,10 @@ class BaseAgent:
                         }
                     )
 
-            if calls_executed >= self.max_tool_calls:
-                # One final no-tools request gives the model a chance to report
-                # what happened instead of silently dropping the last result.
-                result = self._request(messages)
+            if limit_reached or calls_executed >= self.max_tool_calls:
+                # One final request without tools lets the model summarize the
+                # completed calls and prevents unbounded tool-call loops.
+                result = self._request(messages, allow_tools=False)
                 answer = result.content or "Zatrzymano zadanie po osiągnięciu limitu narzędzi."
                 self.history.extend(
                     [{"role": "user", "content": task}, {"role": "assistant", "content": answer}]
