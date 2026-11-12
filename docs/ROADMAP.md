@@ -16,7 +16,7 @@
 
 ## Next milestones
 
-1. Add resumable execution and recovery after application restarts using the persistent task ledger.
+1. Add checkpoint-level resume (current `/retry` restarts an interrupted task from its original request).
 2. Add a model health-check and real benchmark harness (latency, tokens/s, memory use, tool-call success).
 3. Add local/cloud candidate discovery and validated per-model configuration.
 4. Add semantic memory retrieval and user-approved memory summarization.
