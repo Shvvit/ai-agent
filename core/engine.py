@@ -84,7 +84,7 @@ class AgentEngine:
         record = self.task_manager.get(task_id)
         if record is None:
             raise KeyError(f"Nie znaleziono zadania {task_id}.")
-        if record.status.value in {"failed", "paused", "cancelled"}:
+        if record.status.value in {"failed", "paused", "cancelled", "running"}:
             record = self.task_manager.transition(record.id, "queued")
         elif record.status.value != "queued":
             raise ValueError(
