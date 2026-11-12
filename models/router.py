@@ -35,6 +35,7 @@ class ModelRouter:
 
     routes: list[ModelRoute]
     last_selected: str | None = field(default=None, init=False)
+    last_provider: str | None = field(default=None, init=False)
 
     CODE_PATTERN = re.compile(
         r"\b(code|coding|python|program|programuj|kod|debug|bug|błąd|testy|refactor|refaktoryz)\b",
@@ -106,6 +107,9 @@ class ModelRouter:
 
         selected = max(eligible, key=score)
         self.last_selected = selected.name
+        self.last_provider = getattr(
+            getattr(selected.model, "config", None), "provider", None
+        )
         return selected
 
     def chat(self, messages: list[dict[str, Any]], tools: list[dict] | None = None):
