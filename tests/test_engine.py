@@ -17,7 +17,7 @@ def test_normal_question_is_not_reported_as_failed(tmp_path):
     result = AgentEngine(agent=agent).run("Wyjaśnij, czym jest pamięć RAM.")
     assert result.success is True
     assert result.verified is False
-    assert "nie została niezależnie zweryfikowana" in result.verification
+    assert "nie został niezależnie zweryfikowany" in result.verification
 
 
 def test_empty_task_is_rejected():
