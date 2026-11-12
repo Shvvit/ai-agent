@@ -32,7 +32,7 @@ class TaskManager:
         TaskStatus.QUEUED: {TaskStatus.RUNNING, TaskStatus.CANCELLED},
         TaskStatus.RUNNING: {
             TaskStatus.COMPLETED, TaskStatus.FAILED,
-            TaskStatus.PAUSED, TaskStatus.CANCELLED,
+            TaskStatus.PAUSED, TaskStatus.CANCELLED, TaskStatus.QUEUED,
         },
         TaskStatus.PAUSED: {
             TaskStatus.QUEUED, TaskStatus.RUNNING, TaskStatus.CANCELLED,
