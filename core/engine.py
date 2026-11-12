@@ -16,11 +16,12 @@ class TaskResult:
     success: bool
     verification: str
     attempts: int = 0
+    verified: bool = False
 
 
 @dataclass
 class AgentEngine:
-    """Planuje zadania, uruchamia agenta i weryfikuje wybrane rezultaty."""
+    """Plans, executes, repairs, and verifies agent tasks."""
 
     agent: BaseAgent = field(default_factory=BaseAgent)
     verifier: Verifier = field(default_factory=Verifier)
@@ -30,6 +31,8 @@ class AgentEngine:
         task = task.strip()
         if not task:
             raise ValueError("Zadanie nie może być puste.")
+        if self.max_repair_attempts < 0:
+            raise ValueError("max_repair_attempts nie może być ujemne.")
 
         plan = Planner(self.agent).create_plan(task)
         answer = self.agent.run(
@@ -41,16 +44,26 @@ class AgentEngine:
 
         relative_path = self._requested_file_path(task)
         if relative_path is None:
+            completed = bool(answer.strip())
             return TaskResult(
-                task=task, plan=plan, answer=answer, success=False,
-                verification="Nie określono pliku, którego istnienie można automatycznie sprawdzić.",
+                task=task,
+                plan=plan,
+                answer=answer,
+                success=completed,
+                verification=(
+                    "Agent zwrócił odpowiedź. Nie wskazano artefaktu, więc wynik "
+                    "nie został niezależnie zweryfikowany."
+                    if completed
+                    else "Agent nie zwrócił odpowiedzi."
+                ),
+                verified=False,
             )
 
         file_result = self.verifier.file_exists(relative_path)
         if not file_result.success:
-            return TaskResult(task, plan, answer, False, file_result.message)
+            return TaskResult(task, plan, answer, False, file_result.message, verified=False)
 
-        if relative_path.endswith(".py"):
+        if relative_path.lower().endswith(".py"):
             file_manager = self.agent.tools.files
             test_runner = self.agent.tools.tests
             last_output = ""
@@ -59,30 +72,40 @@ class AgentEngine:
                 last_output = result.output
                 if result.success:
                     return TaskResult(
-                        task, plan, answer, True,
+                        task,
+                        plan,
+                        answer,
+                        True,
                         f"Program uruchomił się poprawnie. Wynik: {result.output or '(brak wyjścia)'}",
                         attempts=attempt,
+                        verified=True,
                     )
                 if attempt == self.max_repair_attempts:
                     break
                 current_code = file_manager.read_file(relative_path)
                 answer = self.agent.run(
-                    "Popraw błąd w pliku Python. Zapisz poprawiony kod w tym samym pliku, a potem pozwól ponownie go przetestować.\n\n"
+                    "Popraw błąd w pliku Python. Zapisz poprawiony kod w tym samym pliku, "
+                    "a potem pozwól ponownie go przetestować.\n\n"
                     f"PLIK: {relative_path}\nKOD:\n{current_code}\n\nWYNIK BŁĘDU:\n{last_output}"
                 )
             return TaskResult(
-                task, plan, answer, False,
+                task,
+                plan,
+                answer,
+                False,
                 f"Program nadal nie przechodzi testu:\n{last_output}",
                 attempts=self.max_repair_attempts,
+                verified=False,
             )
 
-        return TaskResult(task, plan, answer, True, file_result.message)
+        return TaskResult(task, plan, answer, True, file_result.message, verified=True)
 
     @staticmethod
     def _requested_file_path(task: str) -> str | None:
         match = re.search(
-            r"(?:utwórz|stwórz|zapisz)\s+plik\s+"
-            r"([A-Za-z0-9_.-]+(?:[/\\][A-Za-z0-9_.-]+)*)",
-            task, flags=re.IGNORECASE,
+            r"(?:utwórz|stwórz|zapisz|create|write)\s+(?:plik|file)\s+"
+            r"([A-Za-z0-9_.-]+(?:[/\\\\][A-Za-z0-9_.-]+)*)",
+            task,
+            flags=re.IGNORECASE,
         )
         return match.group(1) if match else None
