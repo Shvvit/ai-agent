@@ -74,7 +74,7 @@ def test_python_file_is_not_executed_without_opt_in(tmp_path):
     from core.verifier import Verifier
 
     files = FileManager(tmp_path / "workspace")
-    files.write_file("safe.py", "print('should not run')\\n")
+    files.write_file("safe.py", "print('should not run')\n")
     tools = ToolExecutor(file_manager=files, test_runner=TestRunner(workspace=files.workspace))
     agent = BaseAgent(model=FakeTextModel(["Plan", "Plik utworzony"]), tools=tools)
     result = AgentEngine(agent=agent, verifier=Verifier(files.workspace)).run(
