@@ -333,8 +333,8 @@ class BaseAgent:
             return ChatResult(content=str(generate(messages)))
         raise TypeError("Model musi implementować chat() lub generate().")
 
-    def run(self, task: str) -> str:
-        """Execute a task and handle tool calls from local or cloud providers."""
+    def run(self, task: str, *, allow_tools: bool = True) -> str:
+        """Execute a task, optionally disabling all tool execution for this call."""
         task = task.strip()
         if not task:
             raise ValueError("Zadanie nie może być puste.")
@@ -347,8 +347,8 @@ class BaseAgent:
 
         calls_executed = 0
         while True:
-            result = self._request(messages)
-            if not result.tool_calls or not self.enable_tools:
+            result = self._request(messages, allow_tools=allow_tools)
+            if not result.tool_calls or not self.enable_tools or not allow_tools:
                 answer = result.content or "Model nie zwrócił odpowiedzi tekstowej."
                 self._append_history(task, answer)
                 return answer
@@ -378,7 +378,8 @@ class BaseAgent:
 
             limit_reached = False
             is_ollama = (
-                getattr(getattr(self.model, "config", None), "provider", None) == "ollama"
+                getattr(self.model, "last_provider", None) == "ollama"
+                or getattr(getattr(self.model, "config", None), "provider", None) == "ollama"
             )
             for call in result.tool_calls:
                 if calls_executed >= self.max_tool_calls:
