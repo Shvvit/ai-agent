@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from core.engine import AgentEngine
+from core.task_manager import TaskManager
 from memory.manager import MemoryManager
 
 
@@ -9,11 +10,12 @@ def main() -> None:
     print("=" * 48)
     print("WŁASNE AI — agent w terminalu")
     print("Wpisz zadanie i naciśnij Enter.")
-    print("Komendy: /help, /remember, /memory, /search, /forget, /clear, /exit")
+    print("Komendy: /help, /remember, /memory, /search, /forget, /tasks, /task, /clear, /exit")
     print("=" * 48)
 
     memory = MemoryManager()
-    engine = AgentEngine(memory=memory)
+    tasks = TaskManager()
+    engine = AgentEngine(memory=memory, task_manager=tasks)
     try:
         while True:
             try:
@@ -36,6 +38,8 @@ def main() -> None:
                     "\n  /memory           — wyświetla zapisane notatki"
                     "\n  /search TEKST     — wyszukuje w pamięci"
                     "\n  /forget ID        — usuwa notatkę o podanym ID"
+                    "\n  /tasks            — pokazuje ostatnie zadania"
+                    "\n  /task ID          — pokazuje szczegóły zadania"
                     "\n  /clear            — czyści historię bieżącej rozmowy"
                     "\n  /exit             — kończy działanie"
                 )
@@ -71,14 +75,33 @@ def main() -> None:
                 except ValueError:
                     print("Podaj prawidłowe ID, np. /forget 3.")
                 continue
+            if command == "/tasks":
+                records = tasks.list_tasks(limit=20)
+                if not records:
+                    print("Brak zapisanych zadań.")
+                for record in records:
+                    print(f"[{record.id}] {record.status.value.upper()} — {record.title}")
+                continue
+            if task.startswith("/task "):
+                task_id = task[len("/task "):].strip()
+                record = tasks.get(task_id)
+                if record is None:
+                    print("Nie znaleziono zadania o takim ID.")
+                else:
+                    print(f"ID: {record.id}\nStatus: {record.status.value}\nTytuł: {record.title}")
+                    print(f"Opis: {record.description}\nPlan: {record.plan}")
+                    print(f"Wynik: {record.result}\nBłąd: {record.error}")
+                continue
             if command == "/clear":
                 engine.agent.history.clear()
-                print("Historia bieżącej rozmowy została wyczyszczona. Pamięć długoterminowa pozostała bez zmian.")
+                print("Historia bieżącej rozmowy została wyczyszczona. Pamięć i historia zadań pozostały bez zmian.")
                 continue
 
             try:
                 print("\nWłasne AI > Pracuję nad zadaniem...")
                 result = engine.run(task)
+                if result.task_id:
+                    print(f"\nID zadania: {result.task_id}")
                 print(f"\nPlan:\n{result.plan}")
                 print(f"\nOdpowiedź:\n{result.answer}")
                 print(f"\nWeryfikacja: {result.verification}")
@@ -90,6 +113,7 @@ def main() -> None:
                 )
     finally:
         memory.close()
+        tasks.close()
 
 
 if __name__ == "__main__":
