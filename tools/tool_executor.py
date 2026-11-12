@@ -7,14 +7,21 @@ from tools.test_runner import TestRunner
 
 
 class ToolExecutor:
-    """Wykonuje dozwolone narzędzia agenta."""
+    """Executes the explicitly allow-listed tools exposed to the agent."""
 
-    def __init__(self, file_manager: FileManager | None = None, test_runner: TestRunner | None = None, agent_team=None) -> None:
+    def __init__(
+        self,
+        file_manager: FileManager | None = None,
+        test_runner: TestRunner | None = None,
+        agent_team=None,
+    ) -> None:
         self.files = file_manager or FileManager()
         self.tests = test_runner or TestRunner(workspace=self.files.workspace)
         self.agent_team = agent_team
 
     def execute(self, name: str, arguments: dict) -> str:
+        if not isinstance(arguments, dict):
+            raise ValueError("Argumenty narzędzia muszą być obiektem.")
         if name == "write_file":
             path, content = arguments.get("path"), arguments.get("content")
             if not isinstance(path, str) or not isinstance(content, str):
@@ -30,7 +37,11 @@ class ToolExecutor:
             if not isinstance(path, str):
                 raise ValueError("run_python wymaga pola path.")
             result = self.tests.run_python(path)
-            return f"SUKCES: {result.success}\nKOD WYJŚCIA: {result.return_code}\nWYNIK:\n{result.output}"
+            return (
+                f"SUKCES: {result.success}\n"
+                f"KOD WYJŚCIA: {result.return_code}\n"
+                f"WYNIK:\n{result.output}"
+            )
         if name == "delegate_task":
             role, task = arguments.get("role"), arguments.get("task")
             if not isinstance(role, str) or not isinstance(task, str):
@@ -45,8 +56,8 @@ class ToolExecutor:
             from agents.team import AgentTeam
             team = self.agent_team or AgentTeam()
             results = team.run_many(tasks)
-            return "\\n\\n".join(
-                f"AGENT {index + 1}:\\n{result}"
+            return "\n\n".join(
+                f"AGENT {index + 1}:\n{result}"
                 for index, result in enumerate(results)
             )
         raise ValueError(f"Nieznane narzędzie: {name}")
