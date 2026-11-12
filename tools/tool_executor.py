@@ -1,66 +1,153 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
 from tools.file_manager import FileManager
+from tools.registry import ToolDefinition, ToolRegistry
 from tools.test_runner import TestRunner
 
 
 class ToolExecutor:
-    """Executes the explicitly allow-listed tools exposed to the agent."""
+    """Runs only tools registered in the capability-aware registry."""
 
     def __init__(
         self,
         file_manager: FileManager | None = None,
         test_runner: TestRunner | None = None,
         agent_team=None,
+        registry: ToolRegistry | None = None,
+        granted_capabilities: set[str] | None = None,
     ) -> None:
         self.files = file_manager or FileManager()
         self.tests = test_runner or TestRunner(workspace=self.files.workspace)
         self.agent_team = agent_team
+        self.registry = registry or ToolRegistry()
+        self.granted_capabilities = (
+            set(granted_capabilities)
+            if granted_capabilities is not None
+            else {"workspace_read", "workspace_write", "code_execution", "agent_delegation"}
+        )
+        if registry is None:
+            self._register_builtin_tools()
 
-    def execute(self, name: str, arguments: dict) -> str:
-        if not isinstance(arguments, dict):
-            raise ValueError("Argumenty narzędzia muszą być obiektem.")
-        if name == "write_file":
-            path, content = arguments.get("path"), arguments.get("content")
-            if not isinstance(path, str) or not isinstance(content, str):
-                raise ValueError("write_file wymaga pól path i content.")
-            return self.files.write_file(path, content)
-        if name == "read_file":
-            path = arguments.get("path")
-            if not isinstance(path, str):
-                raise ValueError("read_file wymaga pola path.")
-            return self.files.read_file(path)
-        if name == "run_python":
-            path = arguments.get("path")
-            if not isinstance(path, str):
-                raise ValueError("run_python wymaga pola path.")
-            result = self.tests.run_python(path)
-            return (
-                f"SUKCES: {result.success}\n"
-                f"KOD WYJŚCIA: {result.return_code}\n"
-                f"WYNIK:\n{result.output}"
-            )
-        if name == "delegate_task":
-            role, task = arguments.get("role"), arguments.get("task")
-            if not isinstance(role, str) or not isinstance(task, str):
-                raise ValueError("delegate_task wymaga pól role i task.")
-            from agents.team import AgentTeam
-            team = self.agent_team or AgentTeam()
-            return team.run(role, task)
-        if name == "delegate_tasks":
-            tasks = arguments.get("tasks")
-            if not isinstance(tasks, list):
-                raise ValueError("delegate_tasks wymaga tablicy tasks.")
-            from agents.team import AgentTeam
-            team = self.agent_team or AgentTeam()
-            results = team.run_many(tasks)
-            return "\n\n".join(
-                f"AGENT {index + 1}:\n{result}"
-                for index, result in enumerate(results)
-            )
-        raise ValueError(f"Nieznane narzędzie: {name}")
+    def _register_builtin_tools(self) -> None:
+        self.registry.register(ToolDefinition(
+            name="write_file",
+            description="Zapisuje plik wewnątrz workspace.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "content": {"type": "string"},
+                },
+                "required": ["path", "content"],
+                "additionalProperties": False,
+            },
+            handler=lambda args: self.files.write_file(args["path"], args["content"]),
+            required_capabilities=frozenset({"workspace_write"}),
+        ))
+        self.registry.register(ToolDefinition(
+            name="read_file",
+            description="Odczytuje plik z workspace.",
+            parameters={
+                "type": "object",
+                "properties": {"path": {"type": "string"}},
+                "required": ["path"],
+                "additionalProperties": False,
+            },
+            handler=lambda args: self.files.read_file(args["path"]),
+            required_capabilities=frozenset({"workspace_read"}),
+        ))
+        self.registry.register(ToolDefinition(
+            name="run_python",
+            description="Uruchamia plik Python z workspace; wymaga jawnego opt-in użytkownika.",
+            parameters={
+                "type": "object",
+                "properties": {"path": {"type": "string"}},
+                "required": ["path"],
+                "additionalProperties": False,
+            },
+            handler=self._run_python,
+            required_capabilities=frozenset({"code_execution"}),
+        ))
+        self.registry.register(ToolDefinition(
+            name="delegate_task",
+            description="Przekazuje analizę jednemu wyspecjalizowanemu agentowi bez narzędzi komputera.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "role": {"type": "string", "enum": ["researcher", "programmer", "reviewer"]},
+                    "task": {"type": "string"},
+                },
+                "required": ["role", "task"],
+                "additionalProperties": False,
+            },
+            handler=self._delegate_task,
+            required_capabilities=frozenset({"agent_delegation"}),
+        ))
+        self.registry.register(ToolDefinition(
+            name="delegate_tasks",
+            description="Deleguje do trzech niezależnych analiz do wyspecjalizowanych agentów.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "tasks": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 3,
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "role": {"type": "string", "enum": ["researcher", "programmer", "reviewer"]},
+                                "task": {"type": "string"},
+                            },
+                            "required": ["role", "task"],
+                            "additionalProperties": False,
+                        },
+                    }
+                },
+                "required": ["tasks"],
+                "additionalProperties": False,
+            },
+            handler=self._delegate_tasks,
+            required_capabilities=frozenset({"agent_delegation"}),
+        ))
+
+    def definitions(self, *, exclude_names: set[str] | None = None) -> list[dict[str, Any]]:
+        return self.registry.definitions(exclude_names=exclude_names)
+
+    def _run_python(self, arguments: dict[str, Any]) -> str:
+        result = self.tests.run_python(arguments["path"])
+        return (
+            f"SUKCES: {result.success}\n"
+            f"KOD WYJŚCIA: {result.return_code}\n"
+            f"WYNIK:\n{result.output}"
+        )
+
+    def _team(self):
+        if self.agent_team is not None:
+            return self.agent_team
+        from agents.team import AgentTeam
+        return AgentTeam()
+
+    def _delegate_task(self, arguments: dict[str, Any]) -> str:
+        return self._team().run(arguments["role"], arguments["task"])
+
+    def _delegate_tasks(self, arguments: dict[str, Any]) -> str:
+        results = self._team().run_many(arguments["tasks"])
+        return "\n\n".join(
+            f"AGENT {index + 1}:\n{result}"
+            for index, result in enumerate(results)
+        )
+
+    def execute(self, name: str, arguments: dict, *, approved: bool = False) -> str:
+        return self.registry.execute(
+            name,
+            arguments,
+            granted_capabilities=self.granted_capabilities,
+            approved=approved,
+        )
 
     def execute_json(self, name: str, arguments_json: str) -> str:
         arguments = json.loads(arguments_json)
