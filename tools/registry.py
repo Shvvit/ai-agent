@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import re
 from dataclasses import dataclass
 from typing import Any, Callable
@@ -17,10 +18,16 @@ class ToolDefinition:
     def __post_init__(self) -> None:
         if not re.fullmatch(r"[a-z][a-z0-9_]{1,63}", self.name):
             raise ValueError("Nazwa narzędzia ma niepoprawny format.")
-        if not self.description.strip():
+        if not isinstance(self.description, str) or not self.description.strip():
             raise ValueError("Opis narzędzia nie może być pusty.")
         if not isinstance(self.parameters, dict) or self.parameters.get("type") != "object":
             raise ValueError("Schemat parametrów narzędzia musi być obiektem JSON.")
+        if not callable(self.handler):
+            raise ValueError("Narzędzie musi mieć funkcję handler.")
+        if not isinstance(self.required_capabilities, (set, frozenset)) or any(
+            not isinstance(item, str) or not item for item in self.required_capabilities
+        ):
+            raise ValueError("required_capabilities musi być zbiorem nazw uprawnień.")
 
 
 class ToolRegistry:
@@ -45,7 +52,7 @@ class ToolRegistry:
                 "function": {
                     "name": tool.name,
                     "description": tool.description,
-                    "parameters": tool.parameters,
+                    "parameters": copy.deepcopy(tool.parameters),
                 },
             }
             for name, tool in sorted(self._tools.items())
@@ -98,13 +105,22 @@ class ToolRegistry:
         if tool is None:
             raise ValueError(f"Nieznane narzędzie: {name}")
         self._validate_arguments(tool, arguments)
-        granted = granted_capabilities or set()
+        if granted_capabilities is None:
+            granted = set()
+        elif not isinstance(granted_capabilities, (set, frozenset)) or any(
+            not isinstance(item, str) for item in granted_capabilities
+        ):
+            raise TypeError("granted_capabilities musi być zbiorem tekstowych uprawnień.")
+        else:
+            granted = set(granted_capabilities)
+        if not isinstance(approved, bool):
+            raise TypeError("approved musi być wartością bool.")
         missing = tool.required_capabilities - granted
         if missing:
             raise PermissionError(
                 f"Brak uprawnień do narzędzia {name}: {', '.join(sorted(missing))}."
             )
-        if tool.requires_approval and not approved:
+        if tool.requires_approval and approved is not True:
             raise PermissionError(f"Narzędzie {name} wymaga jawnej zgody użytkownika.")
         result = tool.handler(arguments)
         if not isinstance(result, str):
