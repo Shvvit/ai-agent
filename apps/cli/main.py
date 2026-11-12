@@ -40,6 +40,7 @@ def main() -> None:
                     "\n  /forget ID        — usuwa notatkę o podanym ID"
                     "\n  /tasks            — pokazuje ostatnie zadania"
                     "\n  /task ID          — pokazuje szczegóły zadania"
+                    "\n  /retry ID         — ponawia zadanie od początku"
                     "\n  /clear            — czyści historię bieżącej rozmowy"
                     "\n  /exit             — kończy działanie"
                 )
