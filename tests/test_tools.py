@@ -108,3 +108,23 @@ def test_tool_executor_formats_multiple_agent_results_with_newlines():
         ]},
     )
     assert output == "AGENT 1:\nwynik pierwszy\n\nAGENT 2:\nwynik drugi"
+
+
+
+def test_tool_executor_uses_capability_allow_list(tmp_path):
+    files = FileManager(tmp_path / "workspace")
+    executor = ToolExecutor(
+        file_manager=files,
+        granted_capabilities={"workspace_read"},
+    )
+    with pytest.raises(PermissionError, match="Brak uprawnień"):
+        executor.execute(
+            "write_file",
+            {"path": "denied.txt", "content": "no"},
+        )
+
+
+def test_tool_executor_rejects_missing_schema_fields(tmp_path):
+    executor = ToolExecutor(file_manager=FileManager(tmp_path / "workspace"))
+    with pytest.raises(ValueError, match="wymaga pól"):
+        executor.execute("write_file", {"path": "missing-content.txt"})
