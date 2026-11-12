@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 
 class FileManager:
-    """Obsługuje pliki wyłącznie wewnątrz katalogu workspace."""
+    """Handles files only inside the configured workspace."""
 
     def __init__(self, workspace: str | Path = "workspace") -> None:
         self.workspace = Path(workspace).resolve()
@@ -13,18 +13,25 @@ class FileManager:
     def _safe_path(self, relative_path: str) -> Path:
         if not isinstance(relative_path, str) or not relative_path.strip():
             raise ValueError("Ścieżka musi być niepustym tekstem.")
-        candidate = Path(relative_path)
-        if candidate.is_absolute():
-            raise PermissionError("Wymagana jest ścieżka względna.")
+
+        raw_path = relative_path.strip()
+        windows_path = PureWindowsPath(raw_path)
+        if Path(raw_path).is_absolute() or windows_path.is_absolute() or windows_path.drive:
+            raise PermissionError("Wymagana jest względna ścieżka wewnątrz workspace.")
+
+        # Treat Windows separators consistently even when running on POSIX.
+        candidate = Path(raw_path.replace("\\", "/"))
+        if ".." in candidate.parts:
+            raise PermissionError("Segment '..' jest zabroniony.")
+
         path = (self.workspace / candidate).resolve()
         if not path.is_relative_to(self.workspace):
             raise PermissionError("Dostęp poza workspace jest zabroniony.")
+
         current = self.workspace
         for part in candidate.parts:
             if part in ("", "."):
                 continue
-            if part == "..":
-                raise PermissionError("Segment '..' jest zabroniony.")
             current = current / part
             if current.is_symlink():
                 raise PermissionError("Dostęp przez dowiązania symboliczne jest zabroniony.")
