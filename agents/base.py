@@ -88,10 +88,18 @@ class BaseAgent:
     history: list[dict[str, str]] = field(default_factory=list)
     tools: ToolExecutor = field(default_factory=ToolExecutor)
     max_tool_calls: int = 5
+    enable_tools: bool = True
+    enable_delegation: bool = True
+
+    def __post_init__(self) -> None:
+        if self.max_tool_calls < 1:
+            raise ValueError("max_tool_calls musi być większe od zera.")
 
     def _tool_definitions(self) -> list[dict]:
-        """Describe the small, allow-listed tool surface exposed to the model."""
-        return [
+        """Describe the allow-listed tools exposed to the model."""
+        if not self.enable_tools:
+            return []
+        definitions = [
             {
                 "type": "function",
                 "function": {
@@ -132,11 +140,59 @@ class BaseAgent:
                 },
             },
         ]
+        if self.enable_delegation:
+            definitions.extend([
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "delegate_task",
+                        "description": "Przekazuje analizę wyspecjalizowanemu agentowi bez dostępu do narzędzi komputera.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "role": {"type": "string", "enum": ["researcher", "programmer", "reviewer"]},
+                                "task": {"type": "string"},
+                            },
+                            "required": ["role", "task"],
+                            "additionalProperties": False,
+                        },
+                    },
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "delegate_tasks",
+                        "description": "Deleguje do trzech niezależnych analiz do wyspecjalizowanych agentów.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "tasks": {
+                                    "type": "array",
+                                    "minItems": 1,
+                                    "maxItems": 3,
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "role": {"type": "string", "enum": ["researcher", "programmer", "reviewer"]},
+                                            "task": {"type": "string"},
+                                        },
+                                        "required": ["role", "task"],
+                                        "additionalProperties": False,
+                                    },
+                                }
+                            },
+                            "required": ["tasks"],
+                            "additionalProperties": False,
+                        },
+                    },
+                },
+            ])
+        return definitions
 
     def _request(self, messages: list[dict[str, Any]], *, allow_tools: bool = True) -> ChatResult:
         chat = getattr(self.model, "chat", None)
         if callable(chat):
-            result = chat(messages, self._tool_definitions() if allow_tools else [])
+            result = chat(messages, self._tool_definitions() if allow_tools and self.enable_tools else [])
             if isinstance(result, ChatResult):
                 return result
             raise TypeError("Model.chat musi zwracać models.chat.ChatResult.")
@@ -160,8 +216,8 @@ class BaseAgent:
         calls_executed = 0
         while True:
             result = self._request(messages)
-            if not result.tool_calls:
-                answer = result.content
+            if not result.tool_calls or not self.enable_tools:
+                answer = result.content or "Model nie zwrócił odpowiedzi tekstowej."
                 self.history.extend(
                     [
                         {"role": "user", "content": task},
