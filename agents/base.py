@@ -353,7 +353,7 @@ class BaseAgent:
         while True:
             result = self._request(messages, allow_tools=allow_tools)
             if not result.tool_calls or not self.enable_tools or not allow_tools:
-                answer = result.content or "Model nie zwrócił odpowiedzi tekstowej."
+                answer = result.content
                 self._append_history(task, answer)
                 return answer
 
