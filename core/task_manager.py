@@ -104,6 +104,8 @@ class TaskManager:
         normalized_title = (title or description.strip().splitlines()[0][:100]).strip()
         if not normalized_title:
             normalized_title = "Nowe zadanie"
+        if len(normalized_title) > 100:
+            raise ValueError("Tytuł zadania może mieć maksymalnie 100 znaków.")
         now, task_id = self._now(), str(uuid.uuid4())
         with self._lock:
             self._db.execute(
@@ -160,9 +162,9 @@ class TaskManager:
             if new_status not in self.TRANSITIONS[current]:
                 raise ValueError(f"Niedozwolona zmiana statusu: {current.value} -> {new_status.value}.")
             if attempts is not None and (
-                not isinstance(attempts, int) or attempts < 0
+                type(attempts) is not int or attempts < 0
             ):
-                raise ValueError("Liczba prób musi być nieujemną liczbą całkowitą.")
+                raise ValueError("Liczba prób nie może być ujemna ani nieliczbowa.")
             self._db.execute(
                 """UPDATE tasks SET status=?, plan=?, result=?, error=?, attempts=?, updated_at=?
                 WHERE id=?""",
