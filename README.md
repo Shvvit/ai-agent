@@ -114,8 +114,7 @@ CLI zapisuje przebieg zadań w SQLite (`data/tasks.sqlite3`). Dostępne poleceni
 - `/task ID` — szczegóły wybranego zadania.
 
 Statusy są kontrolowane przez maszynę stanów: `queued`, `running`, `paused`,
-`completed`, `failed`, `cancelled`. Obecna wersja zapisuje historię i wyniki;
-automatyczne wznawianie przerwanych zadań jest kolejnym etapem.
+`completed`, `failed`, `cancelled`. Polecenie `/retry ID` ponawia zadanie o statusie failed, paused lub running od początku. Nie odtwarza jeszcze dokładnego checkpointu przerwanego procesu.
 
 ## Agent Zero jako upstream
 
