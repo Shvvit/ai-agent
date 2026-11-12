@@ -81,6 +81,8 @@ class AgentTeam:
     def run_many(self, tasks: list[dict[str, str]]) -> list[str]:
         if not isinstance(tasks, list) or not 1 <= len(tasks) <= 3:
             raise ValueError("delegate_tasks wymaga od 1 do 3 zadań.")
+        if any(not isinstance(item, dict) for item in tasks):
+            raise ValueError("Każde zadanie delegowane musi być obiektem z polami role i task.")
         validated = [self._validate(item.get("role"), item.get("task")) for item in tasks]
         with ThreadPoolExecutor(max_workers=self.max_parallel) as pool:
             futures = [
