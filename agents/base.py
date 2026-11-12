@@ -235,6 +235,10 @@ class BaseAgent:
         """Describe the allow-listed tools exposed to the model."""
         if not self.enable_tools:
             return []
+        registry_definitions = getattr(self.tools, "definitions", None)
+        if callable(registry_definitions):
+            excluded = set() if self.enable_delegation else {"delegate_task", "delegate_tasks"}
+            return registry_definitions(exclude_names=excluded)
         definitions = [
             {
                 "type": "function",
