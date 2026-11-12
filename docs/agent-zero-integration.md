@@ -6,41 +6,45 @@ Use selective integration with our own architecture. Agent Zero is an upstream r
 
 Upstream: https://github.com/agent0ai/agent-zero
 
-## License and copying
+## License and provenance
 
-The upstream repository currently contains an MIT license. Any source files copied or substantial portions reused must retain the copyright and license notice. The first implementation in this branch adapts the provider-neutral tool-call loop and specialist-agent/provider patterns to our own modules; it does not vendor the entire upstream application or its large dependency stack.
+The upstream repository currently uses the MIT License. The original license text is retained at `third_party/agent-zero/LICENSE`. Any upstream source files copied or substantial portions reused must retain the copyright and license notice.
 
-The upstream source tree has more than 4,000 entries and is tightly coupled to its runtime, extensions, helpers, and UI. Copying it wholesale into this project would add a second application, not improve our existing agent. We therefore import and adapt bounded components, with provenance documented here.
+The upstream source tree contains more than 4,000 entries and is tightly coupled to its runtime, extensions, helpers, and UI. Copying the whole application into this project would create a second application and introduce a very large dependency stack. This branch adapts bounded patterns instead of blindly vendoring the full runtime.
 
-## Current baseline findings
+## Baseline findings
 
-- The project has a useful module layout, but most modules are empty placeholders.
-- Only Ollama is configured, even though the model configuration already has a provider field.
-- The non-Ollama path in BaseAgent bypasses tool calling entirely.
-- AgentEngine reports every ordinary conversational task as unsuccessful because it only verifies tasks that mention a file.
-- Tool execution is allow-listed and workspace paths are constrained, which should be preserved.
-- Python execution in a subprocess is not a security sandbox; do not describe it as one.
+- Most modules in this repository are empty placeholders.
+- Only Ollama was configured, despite a provider field in model settings.
+- The non-Ollama path in BaseAgent bypassed tool calling entirely.
+- AgentEngine marked ordinary conversational tasks as unsuccessful because it only verified tasks mentioning a file.
+- File tools are allow-listed and workspace paths are constrained; preserve this.
+- Python subprocess execution is not an OS security sandbox.
 
-## Changes in this integration
+## Implemented in this branch
 
-- Added a normalized provider-independent chat result and tool-call representation.
+- Added provider-neutral `ChatResult` and `ToolCall` types.
 - Added an OpenAI Chat Completions adapter for OpenRouter and compatible endpoints.
-- Updated the agent to use one tool loop for Ollama and OpenAI-compatible providers.
-- Expanded validated environment configuration, including API-key and timeout handling.
-- Added mocked provider/configuration tests that do not require a live API key or Ollama server.
+- Unified the tool loop for Ollama and OpenAI-compatible providers.
+- Added environment validation for provider, URL, API key, temperature, and timeout.
+- Added mocked tests for provider parsing, invalid tool-call payloads, and configuration.
+- Fixed task status semantics: a completed conversational answer is no longer incorrectly labelled as a failed task; independent verification is exposed separately.
+- Added upstream MIT license notice.
+- Added GitHub Actions CI to install the project and run pytest on this integration branch.
+- Added tool-call budget handling that returns a result for every requested call and prevents unbounded tool loops.
 
-## Next work
+## Remaining roadmap
 
 1. Add specialist-agent delegation with bounded depth, timeouts, and explicit role profiles.
 2. Add persistent task memory with provenance and user controls.
 3. Add a capability-aware model router and benchmark suite.
-4. Add real integration tests against a local Ollama instance and an optional OpenRouter key.
-5. Harden process execution using OS-level sandboxing before enabling broader computer-control tools.
+4. Add live integration tests against Ollama and optional OpenRouter credentials.
+5. Harden process execution using OS-level sandboxing before enabling broad computer-control tools.
 
 ## Acceptance criteria
 
-- Tests pass.
+- CI tests pass.
 - Provider errors and malformed tool calls are surfaced clearly.
 - The agent never executes tool names outside its allow-list.
 - Secrets are not committed to source control.
-- The original master branch remains unchanged until changes are reviewed.
+- The original master branch remains unchanged until reviewed.
