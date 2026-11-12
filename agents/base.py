@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 import json
 import os
 from typing import Any, Protocol
+from urllib.parse import urlparse
 
 import ollama
 
@@ -143,8 +144,11 @@ def _build_auto_router(primary: ModelConfig) -> ModelRouter:
             "openai_compatible": "https://api.openai.com/v1",
         }
         host = str(item.get("host") or defaults[provider]).rstrip("/")
-        if not host.startswith(("http://", "https://")):
+        parsed_host = urlparse(host)
+        if parsed_host.scheme not in {"http", "https"} or not parsed_host.netloc:
             raise ValueError(f"Niepoprawny host dla kandydata {model_name}.")
+        if "enabled" in item and not isinstance(item["enabled"], bool):
+            raise ValueError(f"Pole enabled dla {model_name} musi być wartością bool.")
         api_key = None
         if provider != "ollama":
             key_env = str(
