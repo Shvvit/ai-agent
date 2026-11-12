@@ -75,3 +75,36 @@ def test_tool_executor_writes_file(tmp_path):
     result = executor.execute("write_file", {"path": "created.txt", "content": "OK"})
     assert "Zapisano plik" in result
     assert files.read_file("created.txt") == "OK"
+
+
+def test_python_execution_requires_explicit_opt_in(tmp_path):
+    files = FileManager(tmp_path / "workspace")
+    files.write_file("hello.py", "print('hello')\\n")
+    runner = TestRunner(workspace=files.workspace)
+    with pytest.raises(PermissionError, match="domyślnie wyłączone"):
+        runner.run_python("hello.py")
+
+
+def test_python_execution_runs_only_after_explicit_opt_in(tmp_path):
+    files = FileManager(tmp_path / "workspace")
+    files.write_file("hello.py", "print('hello')\\n")
+    runner = TestRunner(workspace=files.workspace, allow_unsafe_execution=True)
+    result = runner.run_python("hello.py")
+    assert result.success is True
+    assert result.output == "hello"
+
+
+def test_tool_executor_formats_multiple_agent_results_with_newlines():
+    class Team:
+        def run_many(self, tasks):
+            return ["wynik pierwszy", "wynik drugi"]
+
+    executor = ToolExecutor(agent_team=Team())
+    output = executor.execute(
+        "delegate_tasks",
+        {"tasks": [
+            {"role": "researcher", "task": "A"},
+            {"role": "reviewer", "task": "B"},
+        ]},
+    )
+    assert "AGENT 1:\\nwynik pierwszy\\n\\nAGENT 2:\\nwynik drugi" == output
