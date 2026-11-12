@@ -211,10 +211,21 @@ class BaseAgent:
     max_tool_calls: int = 5
     enable_tools: bool = True
     enable_delegation: bool = True
+    max_history_messages: int = 40
 
     def __post_init__(self) -> None:
         if self.max_tool_calls < 1:
             raise ValueError("max_tool_calls musi być większe od zera.")
+        if self.max_history_messages < 2:
+            raise ValueError("max_history_messages musi wynosić co najmniej 2.")
+
+    def _append_history(self, task: str, answer: str) -> None:
+        self.history.extend([
+            {"role": "user", "content": task},
+            {"role": "assistant", "content": answer},
+        ])
+        if len(self.history) > self.max_history_messages:
+            del self.history[:-self.max_history_messages]
 
     def _tool_definitions(self) -> list[dict]:
         """Describe the allow-listed tools exposed to the model."""
@@ -339,12 +350,7 @@ class BaseAgent:
             result = self._request(messages)
             if not result.tool_calls or not self.enable_tools:
                 answer = result.content or "Model nie zwrócił odpowiedzi tekstowej."
-                self.history.extend(
-                    [
-                        {"role": "user", "content": task},
-                        {"role": "assistant", "content": answer},
-                    ]
-                )
+                self._append_history(task, answer)
                 return answer
 
             # Preserve the provider's assistant tool-call message so that the
@@ -404,7 +410,5 @@ class BaseAgent:
                 # completed calls and prevents unbounded tool-call loops.
                 result = self._request(messages, allow_tools=False)
                 answer = result.content or "Zatrzymano zadanie po osiągnięciu limitu narzędzi."
-                self.history.extend(
-                    [{"role": "user", "content": task}, {"role": "assistant", "content": answer}]
-                )
+                self._append_history(task, answer)
                 return answer
