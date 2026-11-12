@@ -106,6 +106,17 @@ Pamięć długoterminowa zapisuje wyłącznie notatki dodane jawnie przez użytk
 
 Baza SQLite znajduje się domyślnie w `data/memory.sqlite3`. Wyszukiwanie jest obecnie leksykalne, nie wektorowe.
 
+## Historia zadań
+
+CLI zapisuje przebieg zadań w SQLite (`data/tasks.sqlite3`). Dostępne polecenia:
+
+- `/tasks` — ostatnie zadania i ich statusy;
+- `/task ID` — szczegóły wybranego zadania.
+
+Statusy są kontrolowane przez maszynę stanów: `queued`, `running`, `paused`,
+`completed`, `failed`, `cancelled`. Obecna wersja zapisuje historię i wyniki;
+automatyczne wznawianie przerwanych zadań jest kolejnym etapem.
+
 ## Agent Zero jako upstream
 
 Pełne źródła upstream są przypięte jako submodule w vendor/agent-zero do konkretnego commita. Aby pobrać je razem z projektem z tej gałęzi:
