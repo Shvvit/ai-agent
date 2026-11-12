@@ -3,6 +3,8 @@ from __future__ import annotations
 from agents.base import BaseAgent
 from core.engine import AgentEngine
 from memory.manager import MemoryManager
+from core.task_manager import TaskManager
+from core.task_state import TaskStatus
 
 
 class FakeTextModel:
@@ -83,3 +85,49 @@ def test_python_file_is_not_executed_without_opt_in(tmp_path):
     assert result.success is False
     assert result.verified is False
     assert "domyślnie wyłączone" in result.verification
+
+
+
+def test_engine_persists_completed_task(tmp_path):
+    manager = TaskManager(tmp_path / "tasks.sqlite3")
+    agent = BaseAgent(model=FakeTextModel(["Plan", "Odpowiedź"]))
+    result = AgentEngine(agent=agent, task_manager=manager).run("Wyjaśnij, czym jest RAM")
+    assert result.task_id
+    record = manager.get(result.task_id)
+    assert record is not None
+    assert record.status is TaskStatus.COMPLETED
+    assert record.plan == "Plan"
+    assert record.result == "Odpowiedź"
+    manager.close()
+
+
+def test_engine_persists_failed_task(tmp_path):
+    manager = TaskManager(tmp_path / "tasks.sqlite3")
+    agent = BaseAgent(model=FakeTextModel(["Plan", ""]))
+    result = AgentEngine(agent=agent, task_manager=manager).run("Wyjaśnij, czym jest RAM")
+    record = manager.get(result.task_id)
+    assert result.success is False
+    assert record.status is TaskStatus.FAILED
+    assert record.error == result.verification
+    manager.close()
+
+
+def test_engine_marks_provider_exception_as_failed_task(tmp_path):
+    class BrokenModel:
+        def generate(self, messages):
+            raise RuntimeError("provider offline")
+
+    manager = TaskManager(tmp_path / "tasks.sqlite3")
+    agent = BaseAgent(model=BrokenModel())
+    engine = AgentEngine(agent=agent, task_manager=manager)
+    try:
+        engine.run("Zadanie testowe")
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("Provider exception should propagate")
+    records = manager.list_tasks()
+    assert len(records) == 1
+    assert records[0].status is TaskStatus.FAILED
+    assert "provider offline" in records[0].error
+    manager.close()
