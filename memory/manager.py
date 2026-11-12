@@ -30,7 +30,9 @@ class MemoryManager:
     def __init__(self, database: str | Path | None = None) -> None:
         self.database = str(database or os.getenv("AI_MEMORY_DB", "data/memory.sqlite3"))
         if self.database != ":memory:":
-            Path(self.database).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
+            database_path = Path(self.database).expanduser()
+            database_path.resolve().parent.mkdir(parents=True, exist_ok=True)
+            self.database = str(database_path)
         self._lock = threading.RLock()
         self._connection = sqlite3.connect(self.database, check_same_thread=False, timeout=10.0)
         self._connection.row_factory = sqlite3.Row
@@ -86,11 +88,19 @@ class MemoryManager:
             raise ValueError("Pamięć przekracza limit 20000 znaków.")
         if not isinstance(category, str) or not category.strip() or len(category) > 80:
             raise ValueError("Kategoria musi mieć od 1 do 80 znaków.")
-        if not isinstance(importance, int) or not 1 <= importance <= 5:
+        if type(importance) is not int or not 1 <= importance <= 5:
             raise ValueError("Ważność musi mieścić się w zakresie 1–5.")
         if not isinstance(source, str) or not source.strip() or len(source) > 80:
             raise ValueError("Źródło musi mieć od 1 do 80 znaków.")
-        normalized_tags = sorted({tag.strip() for tag in tags if isinstance(tag, str) and tag.strip()})
+        if isinstance(tags, str):
+            tags = [tags]
+        try:
+            normalized_tags = sorted({
+                tag.strip() for tag in tags
+                if isinstance(tag, str) and tag.strip()
+            })
+        except TypeError as exc:
+            raise ValueError("Tagi muszą być listą tekstów.") from exc
         if len(normalized_tags) > 30:
             raise ValueError("Jedna pamięć może mieć maksymalnie 30 tagów.")
         now = self._now()
@@ -124,10 +134,10 @@ class MemoryManager:
         return [self._entry(row) for row in rows]
 
     def search(self, query: str, *, limit: int = 5, category: str | None = None) -> list[MemoryEntry]:
-        if not isinstance(query, str) or not query.strip():
-            return self.list_memories(category=category, limit=limit)
         if not 1 <= limit <= 100:
             raise ValueError("limit musi mieścić się w zakresie 1–100.")
+        if not isinstance(query, str) or not query.strip():
+            return self.list_memories(category=category, limit=limit)
         terms = self._tokens(query)
         if not terms:
             return []
