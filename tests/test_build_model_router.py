@@ -40,7 +40,7 @@ def test_build_model_can_create_auto_router(monkeypatch):
     complex_result = router.chat([{"role": "user", "content": "Przeanalizuj i zaprojektuj architekturę"}])
     assert simple.content == "local"
     assert complex_result.content == "cloud"
-    assert router.last_selected == "cloud"
+    assert router.last_selected == "cloud-reasoner"
 
 
 def test_auto_router_requires_explicit_candidate_capabilities(monkeypatch):
