@@ -62,7 +62,7 @@ Dodatkowe ustawienia:
 - AI_TIMEOUT — limit zapytania w sekundach, domyślnie 120
 - AI_HOST — alternatywny adres serwera, ma pierwszeństwo przed AI_BASE_URL
 
-Nie commituj prawdziwych kluczy API. Plik .env.example jest tylko wzorem; obecna konfiguracja czyta zmienne środowiskowe systemu.
+Nie commituj prawdziwych kluczy API. Plik .env.example jest tylko wzorem; obecna konfiguracja czyta zmienne środowiskowe systemu. Uruchamianie wygenerowanego kodu Python jest domyślnie zablokowane, ponieważ subprocess nie jest piaskownicą. Aby jawnie włączyć uruchamianie zaufanego kodu, ustaw `$env:AI_ALLOW_UNSANDBOXED_PYTHON="1"` w PowerShell. Nie włączaj tego dla nieznanego kodu.
 
 ## Testy
 
