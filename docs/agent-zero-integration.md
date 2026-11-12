@@ -2,74 +2,45 @@
 
 ## Decision
 
-Use a **selective integration with our own architecture**, not a wholesale fork and not a replacement of this repository.
-
-The existing `Shvvit/ai-agent` project remains the main product. Agent Zero is an upstream reference and a source of proven ideas/components. We will inspect its implementation and license before copying or adapting any code.
+Use selective integration with our own architecture. Agent Zero is an upstream reference and a source of proven design patterns; this repository remains the main product.
 
 Upstream: https://github.com/agent0ai/agent-zero
 
-## Why this approach
+## License and copying
 
-- Preserve our existing project structure, model configuration, engine, verifier, tools, and tests.
-- Avoid inheriting unrelated UI, deployment, dependencies, and design decisions.
-- Adapt only components that demonstrably improve our target system.
-- Keep the integration reversible and reviewable through small commits.
-- Respect the upstream license and retain required notices for any reused code.
+The upstream repository currently contains an MIT license. Any source files copied or substantial portions reused must retain the copyright and license notice. The first implementation in this branch adapts the provider-neutral tool-call loop and specialist-agent/provider patterns to our own modules; it does not vendor the entire upstream application or its large dependency stack.
 
-## Target capabilities
+The upstream source tree has more than 4,000 entries and is tightly coupled to its runtime, extensions, helpers, and UI. Copying it wholesale into this project would add a second application, not improve our existing agent. We therefore import and adapt bounded components, with provenance documented here.
 
-1. Local and cloud model providers, including Ollama and OpenRouter-compatible APIs.
-2. Model router that selects models by task, capability, latency, context, and available VRAM.
-3. Planner -> executor -> verifier loop with bounded retries and clear failure reporting.
-4. Specialist agents and controlled delegation.
-5. Persistent, searchable memory with explicit user control.
-6. Tool system for terminal, files, browser, and computer interaction with permission boundaries.
-7. CLI first, then desktop and remote web interfaces.
-8. Evaluation suite for task success, latency, token use, reliability, and hardware load.
+## Current baseline findings
 
-## Integration rules
+- The project has a useful module layout, but most modules are empty placeholders.
+- Only Ollama is configured, even though the model configuration already has a provider field.
+- The non-Ollama path in BaseAgent bypasses tool calling entirely.
+- AgentEngine reports every ordinary conversational task as unsuccessful because it only verifies tasks that mention a file.
+- Tool execution is allow-listed and workspace paths are constrained, which should be preserved.
+- Python execution in a subprocess is not a security sandbox; do not describe it as one.
 
-- Do not replace the existing engine until a measurable comparison shows the replacement is better.
-- Do not import the entire Agent Zero repository as a dependency.
-- Keep risky computer/terminal actions behind explicit permissions and sandboxing.
-- Keep secrets out of source control; use environment variables and local secret storage.
-- Add tests for each adapted component.
-- Maintain compatibility with the current target machine: RTX 5060 8 GB VRAM and 16 GB system RAM.
+## Changes in this integration
 
-## Initial repository observations
+- Added a normalized provider-independent chat result and tool-call representation.
+- Added an OpenAI Chat Completions adapter for OpenRouter and compatible endpoints.
+- Updated the agent to use one tool loop for Ollama and OpenAI-compatible providers.
+- Expanded validated environment configuration, including API-key and timeout handling.
+- Added mocked provider/configuration tests that do not require a live API key or Ollama server.
 
-The current repository already has the beginnings of separate `agents/`, `core/`, `models/`, `memory/`, `tools/`, `security/`, and `tests/` areas. Several tracked modules are currently empty placeholders, while `agents/base.py`, `agents/planner.py`, `core/engine.py`, `apps/cli/main.py`, and `config/model_config.py` contain implementation. This makes a selective integration safer than replacing the project wholesale.
+## Next work
 
-## Work sequence
-
-### Phase 0 — baseline and upstream audit
-- Record current branch, tests, dependencies, and working behavior.
-- Inspect Agent Zero architecture, supported providers, tool execution, memory, agent delegation, security, and license.
-- Map upstream concepts to our modules; classify each as reuse, adapt, replace, or reject.
-
-### Phase 1 — model and runtime foundation
-- Stabilize provider interfaces and Ollama connectivity.
-- Add provider health checks, timeouts, retries, and normalized errors.
-- Establish baseline performance tests on the target PC.
-
-### Phase 2 — orchestration and tools
-- Improve planning/execution/verification.
-- Add specialist-agent delegation only where it improves measured results.
-- Harden tool permissions and sandbox boundaries.
-
-### Phase 3 — memory and interfaces
-- Implement durable memory and retrieval.
-- Expand CLI, then add desktop and remote interfaces.
-
-### Phase 4 — evaluation and optimization
-- Compare models and agent strategies using repeatable tasks.
-- Optimize VRAM/RAM use, latency, and reliability.
+1. Add specialist-agent delegation with bounded depth, timeouts, and explicit role profiles.
+2. Add persistent task memory with provenance and user controls.
+3. Add a capability-aware model router and benchmark suite.
+4. Add real integration tests against a local Ollama instance and an optional OpenRouter key.
+5. Harden process execution using OS-level sandboxing before enabling broader computer-control tools.
 
 ## Acceptance criteria
 
-A change is accepted only when:
-- tests pass;
-- the behavior is demonstrated with a reproducible task;
-- resource use is measured on the target hardware where relevant;
-- security and failure behavior are documented;
-- the change is smaller or more maintainable than the alternative.
+- Tests pass.
+- Provider errors and malformed tool calls are surfaced clearly.
+- The agent never executes tool names outside its allow-list.
+- Secrets are not committed to source control.
+- The original master branch remains unchanged until changes are reviewed.
