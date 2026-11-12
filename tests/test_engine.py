@@ -65,3 +65,21 @@ def test_relevant_long_term_memory_is_added_to_planning_and_execution(tmp_path):
     assert "Qwen3" in model.user_prompts[0]
     assert "Qwen3" in model.user_prompts[1]
     memory.close()
+
+
+def test_python_file_is_not_executed_without_opt_in(tmp_path):
+    from tools.file_manager import FileManager
+    from tools.test_runner import TestRunner
+    from tools.tool_executor import ToolExecutor
+    from core.verifier import Verifier
+
+    files = FileManager(tmp_path / "workspace")
+    files.write_file("safe.py", "print('should not run')\\n")
+    tools = ToolExecutor(file_manager=files, test_runner=TestRunner(workspace=files.workspace))
+    agent = BaseAgent(model=FakeTextModel(["Plan", "Plik utworzony"]), tools=tools)
+    result = AgentEngine(agent=agent, verifier=Verifier(files.workspace)).run(
+        "Utwórz plik safe.py"
+    )
+    assert result.success is False
+    assert result.verified is False
+    assert "domyślnie wyłączone" in result.verification
