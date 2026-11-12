@@ -75,3 +75,25 @@ def test_empty_memory_search_returns_empty(tmp_path):
     memory.remember("tekst")
     assert memory.search("!!!") == []
     memory.close()
+
+
+
+def test_memory_accepts_single_string_tag_as_one_tag(tmp_path):
+    memory = MemoryManager(tmp_path / "memory.sqlite3")
+    memory_id = memory.remember("Ollama local", tags="ollama")
+    assert memory.get(memory_id).tags == ("ollama",)
+    memory.close()
+
+
+def test_memory_rejects_boolean_importance(tmp_path):
+    memory = MemoryManager(tmp_path / "memory.sqlite3")
+    with pytest.raises(ValueError, match="1–5"):
+        memory.remember("note", importance=True)
+    memory.close()
+
+
+def test_memory_search_validates_limit_even_for_empty_query(tmp_path):
+    memory = MemoryManager(tmp_path / "memory.sqlite3")
+    with pytest.raises(ValueError, match="1–100"):
+        memory.search("", limit=200)
+    memory.close()
