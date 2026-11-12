@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from core.verifier import Verifier
 from tools.file_manager import FileManager
 from tools.test_runner import TestRunner
 from tools.tool_executor import ToolExecutor
@@ -25,8 +26,17 @@ def test_read_missing_file_raises_error(tmp_path):
         files.read_file("missing.txt")
 
 
-@pytest.mark.parametrize("path", ["../outside.txt", "..\\outside.txt", "folder/../../outside.txt"])
-def test_path_traversal_is_blocked(tmp_path, path):
+@pytest.mark.parametrize(
+    "path",
+    [
+        "../outside.txt",
+        "..\\outside.txt",
+        "folder/../../outside.txt",
+        "C:\\Windows\\system.ini",
+        "\\\\server\\share\\file.txt",
+    ],
+)
+def test_path_traversal_and_windows_absolute_paths_are_blocked(tmp_path, path):
     files = FileManager(tmp_path / "workspace")
     with pytest.raises(PermissionError):
         files.write_file(path, "nie powinno się zapisać")
@@ -36,6 +46,18 @@ def test_absolute_path_is_blocked(tmp_path):
     files = FileManager(tmp_path / "workspace")
     with pytest.raises(PermissionError):
         files.read_file(str(tmp_path / "outside.txt"))
+
+
+def test_verifier_rejects_windows_style_traversal(tmp_path):
+    verifier = Verifier(tmp_path / "workspace")
+    result = verifier.file_exists("..\\outside.txt")
+    assert result.success is False
+
+
+def test_test_runner_rejects_windows_style_traversal(tmp_path):
+    runner = TestRunner(workspace=tmp_path / "workspace")
+    with pytest.raises(PermissionError):
+        runner.run_python("..\\outside.py")
 
 
 def test_tool_executor_rejects_unknown_tool(tmp_path):
