@@ -24,4 +24,4 @@ class Planner:
             f"ZADANIE:\n{task}"
         )
 
-        return self.agent.run(prompt)
+        return self.agent.run(prompt, allow_tools=False)
