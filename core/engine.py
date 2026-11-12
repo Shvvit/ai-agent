@@ -7,6 +7,7 @@ from agents.base import BaseAgent
 from agents.planner import Planner
 from core.verifier import Verifier
 from memory.manager import MemoryManager
+from core.task_manager import TaskManager
 
 
 @dataclass
@@ -28,6 +29,7 @@ class AgentEngine:
     verifier: Verifier = field(default_factory=Verifier)
     max_repair_attempts: int = 3
     memory: MemoryManager | None = None
+    task_manager: TaskManager | None = None
 
     def _memory_context(self, task: str) -> str:
         if self.memory is None:
@@ -45,6 +47,33 @@ class AgentEngine:
         return "\n".join(lines)
 
     def run(self, task: str) -> TaskResult:
+        if not isinstance(task, str) or not task.strip():
+            raise ValueError("Zadanie nie może być puste.")
+        task = task.strip()
+        record = self.task_manager.create(task) if self.task_manager else None
+        if record is not None:
+            self.task_manager.transition(record.id, "running")
+        try:
+            result = self._execute(task)
+        except Exception as exc:
+            if record is not None:
+                self.task_manager.transition(
+                    record.id, "failed", error=f"{type(exc).__name__}: {exc}"
+                )
+            raise
+        if record is not None:
+            self.task_manager.transition(
+                record.id,
+                "completed" if result.success else "failed",
+                plan=result.plan,
+                result=result.answer,
+                error="" if result.success else result.verification,
+                attempts=result.attempts,
+            )
+            result.task_id = record.id
+        return result
+
+    def _execute(self, task: str) -> TaskResult:
         if not isinstance(task, str) or not task.strip():
             raise ValueError("Zadanie nie może być puste.")
         task = task.strip()
