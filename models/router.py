@@ -34,7 +34,6 @@ class ModelRouter:
     """Select a model using declared capabilities and transparent heuristics."""
 
     routes: list[ModelRoute]
-    fallback_name: str | None = None
     last_selected: str | None = field(default=None, init=False)
 
     CODE_PATTERN = re.compile(
@@ -52,8 +51,6 @@ class ModelRouter:
         names = [route.name for route in self.routes]
         if len(names) != len(set(names)):
             raise ValueError("Nazwy modeli w routerze muszą być unikalne.")
-        if self.fallback_name and self.fallback_name not in names:
-            raise ValueError("fallback_name wskazuje model spoza listy.")
 
     @staticmethod
     def _task_text(messages: list[dict[str, Any]]) -> str:
