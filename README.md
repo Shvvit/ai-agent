@@ -94,6 +94,18 @@ Obsługiwane możliwości: `chat`, `tool_calling`, `code`, `reasoning`,
 `vision`. Klucze API wskazuje się przez `api_key_env`; nie wpisuj sekretów
 bezpośrednio do JSON ani repozytorium. Maksymalnie 8 dodatkowych kandydatów.
 
+## Pamięć
+
+Pamięć długoterminowa zapisuje wyłącznie notatki dodane jawnie przez użytkownika. W terminalu dostępne są:
+
+- `/remember TEKST` — zapisz notatkę;
+- `/memory` — pokaż notatki;
+- `/search TEKST` — wyszukaj notatki;
+- `/forget ID` — usuń notatkę;
+- `/clear` — wyczyść historię rozmowy, bez usuwania pamięci.
+
+Baza SQLite znajduje się domyślnie w `data/memory.sqlite3`. Wyszukiwanie jest obecnie leksykalne, nie wektorowe.
+
 ## Agent Zero jako upstream
 
 Pełne źródła upstream są przypięte jako submodule w vendor/agent-zero do konkretnego commita. Aby pobrać je razem z projektem z tej gałęzi:
