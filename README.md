@@ -111,7 +111,8 @@ Baza SQLite znajduje się domyślnie w `data/memory.sqlite3`. Wyszukiwanie jest 
 CLI zapisuje przebieg zadań w SQLite (`data/tasks.sqlite3`). Dostępne polecenia:
 
 - `/tasks` — ostatnie zadania i ich statusy;
-- `/task ID` — szczegóły wybranego zadania.
+- `/task ID` — szczegóły wybranego zadania;
+- `/retry ID` — ponawia zadanie failed, paused lub przerwane jako running od początku.
 
 Statusy są kontrolowane przez maszynę stanów: `queued`, `running`, `paused`,
 `completed`, `failed`, `cancelled`. Polecenie `/retry ID` ponawia zadanie o statusie failed, paused lub running od początku. Nie odtwarza jeszcze dokładnego checkpointu przerwanego procesu.
