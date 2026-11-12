@@ -72,6 +72,28 @@ python -m pytest -q
 
 Testy providerów są mockowane i nie wymagają działającego Ollama ani płatnego klucza API. Testy integracyjne z rzeczywistymi modelami będą osobnym etapem.
 
+## Automatyczny wybór modelu
+
+Domyślnie `AI_ROUTING=off` i projekt używa jednego modelu z `AI_PROVIDER` / `AI_MODEL`.
+Aby włączyć router, ustaw `AI_ROUTING=auto`. Router wybiera spośród jawnie
+skonfigurowanych modeli według deklarowanych możliwości, szybkości, jakości
+rozumowania i kosztu. Nie wykonuje jeszcze automatycznych benchmarków.
+
+Przykład PowerShell (klucz API pozostaje w osobnej zmiennej środowiskowej):
+
+~~~powershell
+$env:AI_ROUTING="auto"
+$env:AI_ROUTER_PRIMARY_CAPABILITIES="chat,tool_calling,code,reasoning"
+$env:OPENROUTER_API_KEY="YOUR_API_KEY"
+$env:AI_ROUTER_CANDIDATES='[{"name":"cloud-reasoner","provider":"openrouter","model":"provider/model-name","api_key_env":"OPENROUTER_API_KEY","capabilities":["chat","tool_calling","code","reasoning"],"speed_score":2,"reasoning_score":5,"cost_score":1,"context_window":32768}]'
+python -m apps.cli.main
+~~~
+
+Każdy kandydat wymaga pól `provider`, `model` i jawnej listy `capabilities`.
+Obsługiwane możliwości: `chat`, `tool_calling`, `code`, `reasoning`,
+`vision`. Klucze API wskazuje się przez `api_key_env`; nie wpisuj sekretów
+bezpośrednio do JSON ani repozytorium. Maksymalnie 8 dodatkowych kandydatów.
+
 ## Agent Zero jako upstream
 
 Pełne źródła upstream są przypięte jako submodule w vendor/agent-zero do konkretnego commita. Aby pobrać je razem z projektem z tej gałęzi:
