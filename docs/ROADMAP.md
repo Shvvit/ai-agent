@@ -11,12 +11,12 @@
 - Capability-aware model router with explicit candidate profiles and offline tests.
 - SQLite long-term memory with explicit writes, lexical retrieval, tags, importance, pinning and deletion.
 - CLI commands for saving, searching, listing and deleting memories.
-- Task planning, result verification and limited repair attempts.
+- Task planning, result verification, limited repair attempts and a persistent task ledger with validated lifecycle transitions.
 - CI on Python 3.12.
 
 ## Next milestones
 
-1. Add a proper task state machine, durable task records and resumable execution.
+1. Add resumable execution and recovery after application restarts using the persistent task ledger.
 2. Add a model health-check and real benchmark harness (latency, tokens/s, memory use, tool-call success).
 3. Add local/cloud candidate discovery and validated per-model configuration.
 4. Add semantic memory retrieval and user-approved memory summarization.
