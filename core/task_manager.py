@@ -165,15 +165,16 @@ class TaskManager:
                 type(attempts) is not int or attempts < 0
             ):
                 raise ValueError("Liczba prób nie może być ujemna ani nieliczbowa.")
+            requeue = new_status is TaskStatus.QUEUED
             self._db.execute(
                 """UPDATE tasks SET status=?, plan=?, result=?, error=?, attempts=?, updated_at=?
                 WHERE id=?""",
                 (
                     new_status.value,
-                    row["plan"] if plan is None else plan,
-                    row["result"] if result is None else result,
-                    row["error"] if error is None else error,
-                    row["attempts"] if attempts is None else attempts,
+                    "" if requeue and plan is None else row["plan"] if plan is None else plan,
+                    "" if requeue and result is None else row["result"] if result is None else result,
+                    "" if requeue and error is None else row["error"] if error is None else error,
+                    0 if requeue and attempts is None else row["attempts"] if attempts is None else attempts,
                     now,
                     str(task_id),
                 ),
