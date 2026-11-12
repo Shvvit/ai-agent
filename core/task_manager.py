@@ -45,7 +45,9 @@ class TaskManager:
     def __init__(self, database: str | Path | None = None) -> None:
         self.database = str(database or os.getenv("AI_TASK_DB", "data/tasks.sqlite3"))
         if self.database != ":memory:":
-            Path(self.database).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
+            database_path = Path(self.database).expanduser()
+            database_path.resolve().parent.mkdir(parents=True, exist_ok=True)
+            self.database = str(database_path)
         self._lock = threading.RLock()
         self._db = sqlite3.connect(self.database, check_same_thread=False, timeout=10)
         self._db.row_factory = sqlite3.Row
