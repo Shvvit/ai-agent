@@ -181,7 +181,7 @@ def _build_auto_router(primary: ModelConfig) -> ModelRouter:
             )
         )
 
-    return ModelRouter(routes=routes, fallback_name=routes[0].name)
+    return ModelRouter(routes=routes)
 
 
 def build_model(config: ModelConfig | None = None) -> Any:
