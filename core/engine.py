@@ -19,6 +19,7 @@ class TaskResult:
     verification: str
     attempts: int = 0
     verified: bool = False
+    task_id: str | None = None
 
 
 @dataclass
