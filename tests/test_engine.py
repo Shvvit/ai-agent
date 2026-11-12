@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from agents.base import BaseAgent
 from core.engine import AgentEngine
 from memory.manager import MemoryManager
@@ -149,15 +151,29 @@ def test_engine_can_retry_failed_task_using_same_task_id(tmp_path):
     manager.close()
 
 
-def test_retry_rejects_running_or_completed_tasks(tmp_path):
+
+
+def test_retry_recovers_interrupted_running_task(tmp_path):
+    manager = TaskManager(tmp_path / "tasks.sqlite3")
+    task = manager.create("Wyjaśnij RAM")
+    manager.transition(task.id, TaskStatus.RUNNING)
+    engine = AgentEngine(
+        agent=BaseAgent(model=FakeTextModel(["Plan wznowiony", "Odpowiedź"])),
+        task_manager=manager,
+    )
+    result = engine.retry(task.id)
+    assert result.success is True
+    assert result.task_id == task.id
+    assert manager.get(task.id).status is TaskStatus.COMPLETED
+    manager.close()
+
+
+def test_retry_rejects_completed_task(tmp_path):
     manager = TaskManager(tmp_path / "tasks.sqlite3")
     task = manager.create("Test")
     manager.transition(task.id, TaskStatus.RUNNING)
+    manager.transition(task.id, TaskStatus.COMPLETED)
     engine = AgentEngine(agent=BaseAgent(model=FakeTextModel([])), task_manager=manager)
-    try:
+    with pytest.raises(ValueError, match="Nie można ponowić"):
         engine.retry(task.id)
-    except ValueError as exc:
-        assert "Nie można ponowić" in str(exc)
-    else:
-        raise AssertionError("Running task should not be retried")
     manager.close()
