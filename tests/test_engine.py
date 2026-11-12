@@ -1,0 +1,48 @@
+from __future__ import annotations
+
+from agents.base import BaseAgent
+from core.engine import AgentEngine
+
+
+class FakeTextModel:
+    def __init__(self, answers):
+        self.answers = iter(answers)
+
+    def generate(self, messages):
+        return next(self.answers)
+
+
+def test_normal_question_is_not_reported_as_failed(tmp_path):
+    agent = BaseAgent(model=FakeTextModel(["Plan", "Odpowiedź na pytanie"]))
+    result = AgentEngine(agent=agent).run("Wyjaśnij, czym jest pamięć RAM.")
+    assert result.success is True
+    assert result.verified is False
+    assert "nie została niezależnie zweryfikowana" in result.verification
+
+
+def test_empty_task_is_rejected():
+    agent = BaseAgent(model=FakeTextModel([]))
+    try:
+        AgentEngine(agent=agent).run("   ")
+    except ValueError as exc:
+        assert "nie może być puste" in str(exc)
+    else:
+        raise AssertionError("Empty task should be rejected")
+
+
+def test_python_file_task_is_verified(tmp_path):
+    from tools.file_manager import FileManager
+    from tools.test_runner import TestRunner
+    from tools.tool_executor import ToolExecutor
+    from core.verifier import Verifier
+
+    files = FileManager(tmp_path / "workspace")
+    files.write_file("hello.py", "print('hello')\n")
+    tools = ToolExecutor(file_manager=files, test_runner=TestRunner(workspace=files.workspace))
+    agent = BaseAgent(model=FakeTextModel(["Plan", "Utworzono hello.py"]), tools=tools)
+    result = AgentEngine(agent=agent, verifier=Verifier(files.workspace)).run(
+        "Utwórz plik hello.py"
+    )
+    assert result.success is True
+    assert result.verified is True
+    assert result.attempts == 0
