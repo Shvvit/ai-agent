@@ -131,3 +131,33 @@ def test_engine_marks_provider_exception_as_failed_task(tmp_path):
     assert records[0].status is TaskStatus.FAILED
     assert "provider offline" in records[0].error
     manager.close()
+
+
+
+def test_engine_can_retry_failed_task_using_same_task_id(tmp_path):
+    manager = TaskManager(tmp_path / "tasks.sqlite3")
+    model = FakeTextModel(["Plan", "", "Plan poprawiony", "Odpowiedź po ponowieniu"])
+    engine = AgentEngine(agent=BaseAgent(model=model), task_manager=manager)
+    first = engine.run("Wyjaśnij, czym jest RAM")
+    assert first.success is False
+    second = engine.retry(first.task_id)
+    assert second.success is True
+    assert second.task_id == first.task_id
+    record = manager.get(first.task_id)
+    assert record.status is TaskStatus.COMPLETED
+    assert record.error == ""
+    manager.close()
+
+
+def test_retry_rejects_running_or_completed_tasks(tmp_path):
+    manager = TaskManager(tmp_path / "tasks.sqlite3")
+    task = manager.create("Test")
+    manager.transition(task.id, TaskStatus.RUNNING)
+    engine = AgentEngine(agent=BaseAgent(model=FakeTextModel([])), task_manager=manager)
+    try:
+        engine.retry(task.id)
+    except ValueError as exc:
+        assert "Nie można ponowić" in str(exc)
+    else:
+        raise AssertionError("Running task should not be retried")
+    manager.close()
