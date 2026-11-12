@@ -41,7 +41,7 @@ def test_python_file_task_is_verified(tmp_path):
 
     files = FileManager(tmp_path / "workspace")
     files.write_file("hello.py", "print('hello')\n")
-    tools = ToolExecutor(file_manager=files, test_runner=TestRunner(workspace=files.workspace))
+    tools = ToolExecutor(file_manager=files, test_runner=TestRunner(workspace=files.workspace, allow_unsafe_execution=True))
     agent = BaseAgent(model=FakeTextModel(["Plan", "Utworzono hello.py"]), tools=tools)
     result = AgentEngine(agent=agent, verifier=Verifier(files.workspace)).run(
         "Utwórz plik hello.py"
