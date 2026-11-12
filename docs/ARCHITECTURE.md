@@ -8,7 +8,7 @@
 4. The provider-neutral tool loop dispatches only allow-listed tools.
 5. Specialist tasks may be delegated to bounded agents with no tools and no recursive delegation.
 6. `AgentEngine` checks requested file artifacts and can make a limited repair attempt for Python files.
-7. The task ledger records the final status, plan, answer, errors and attempts; the CLI displays the answer and verification status.
+7. The task ledger records status, plan, answer, errors and attempts; `/retry ID` restarts failed or interrupted tasks from the original request.
 
 ## Model providers and routing
 
