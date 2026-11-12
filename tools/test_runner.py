@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -14,15 +15,27 @@ class TestResult:
 
 
 class TestRunner:
-    """Runs Python files from the workspace (not an OS-level sandbox)."""
+    """Runs workspace Python files only after explicit unsafe-execution opt-in.
 
-    __test__ = False  # Prevent pytest from trying to collect this helper class.
+    This is not an OS sandbox. The opt-in exists to prevent an agent from
+    executing arbitrary Python on the host by default.
+    """
 
-    def __init__(self, workspace: str | Path = "workspace", timeout: int = 30) -> None:
+    __test__ = False
+
+    def __init__(
+        self,
+        workspace: str | Path = "workspace",
+        timeout: int = 30,
+        allow_unsafe_execution: bool | None = None,
+    ) -> None:
         if timeout <= 0:
             raise ValueError("Timeout musi być większy od zera.")
         self.workspace = Path(workspace).resolve()
         self.timeout = timeout
+        if allow_unsafe_execution is None:
+            allow_unsafe_execution = os.getenv("AI_ALLOW_UNSANDBOXED_PYTHON", "").strip() == "1"
+        self.allow_unsafe_execution = bool(allow_unsafe_execution)
         self.workspace.mkdir(parents=True, exist_ok=True)
 
     def run_python(self, relative_path: str) -> TestResult:
@@ -41,6 +54,12 @@ class TestRunner:
             raise PermissionError("Nie wolno uruchamiać plików spoza workspace.")
         if not script.is_file() or script.suffix != ".py":
             raise ValueError("Podaj istniejący plik .py w workspace.")
+        if not self.allow_unsafe_execution:
+            raise PermissionError(
+                "Uruchamianie kodu jest domyślnie wyłączone, ponieważ subprocess "
+                "nie jest piaskownicą bezpieczeństwa. Ustaw "
+                "AI_ALLOW_UNSANDBOXED_PYTHON=1 tylko wtedy, gdy ufasz kodowi."
+            )
 
         try:
             result = subprocess.run(
