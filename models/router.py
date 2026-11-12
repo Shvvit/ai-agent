@@ -42,7 +42,7 @@ class ModelRouter:
         re.IGNORECASE,
     )
     REASONING_PATTERN = re.compile(
-        r"\b(analy[sz]|compare|porównaj|zaprojektuj|architektur|strateg|dlaczego|wyjaśnij|plan|optymaliz)\w*",
+        r"\b(analiz|analy[sz]|compare|porównaj|zaprojektuj|architektur|strateg|dlaczego|wyjaśnij|plan|optymaliz)\w*",
         re.IGNORECASE,
     )
 
