@@ -75,3 +75,35 @@ def test_router_supports_generate_only_model():
 
     router = ModelRouter([ModelRoute("legacy", Legacy(), frozenset({"chat"}))])
     assert router.generate([{"role": "user", "content": "hello"}]) == "legacy"
+
+
+def test_router_exposes_selected_provider_for_native_tool_protocol():
+    from config.model_config import ModelConfig
+    from models.chat import ToolCall
+    from agents.base import BaseAgent
+
+    class FakeOllama:
+        def __init__(self):
+            self.config = ModelConfig(provider="ollama", model="fake")
+            self.received = []
+
+        def chat(self, messages, tools):
+            self.received.append(messages)
+            if not any(message.get("role") == "tool" for message in messages if isinstance(message, dict)):
+                return ChatResult(tool_calls=[ToolCall("read_file", {"path": "a.txt"}, "call-1")])
+            return ChatResult(content="plik odczytany")
+
+    class FakeTools:
+        def execute(self, name, arguments):
+            return "zawartość pliku"
+
+    local = FakeOllama()
+    router = ModelRouter([
+        ModelRoute("local", local, frozenset({"chat", "tool_calling"}))
+    ])
+    agent = BaseAgent(model=router, tools=FakeTools())
+    assert agent.run("Odczytaj plik a.txt") == "plik odczytany"
+    assert router.last_provider == "ollama"
+    tool_message = local.received[-1][-1]
+    assert tool_message["role"] == "tool"
+    assert tool_message["tool_name"] == "read_file"
