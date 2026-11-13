@@ -1,0 +1,54 @@
+name: Windows desktop build
+
+on:
+  push:
+    branches:
+      - feature/agent-zero-integration
+    paths:
+      - "apps/desktop/**"
+      - "agents/**"
+      - "config/**"
+      - "core/**"
+      - "memory/**"
+      - "models/**"
+      - "security/**"
+      - "tools/**"
+      - "pyproject.toml"
+      - ".github/workflows/windows-desktop.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: windows-desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install desktop application and packager
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[desktop]"
+          python -m pip install "pyinstaller>=6.10"
+      - name: Build Windows executable
+        run: |
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name WlasneAI --collect-all PySide6 --collect-all shiboken6 --collect-all keyring --hidden-import keyring.backends.Windows --collect-submodules agents --collect-submodules models --collect-submodules tools --collect-submodules core --collect-submodules config --collect-submodules memory --collect-submodules security apps/desktop/main.py
+      - name: Verify executable exists
+        shell: pwsh
+        run: |
+          if (!(Test-Path "dist/WlasneAI.exe")) { throw "WlasneAI.exe was not produced" }
+          Get-Item "dist/WlasneAI.exe" | Format-List Name,Length,LastWriteTime
+      - name: Upload Windows executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: WlasneAI-Windows-x64
+          path: dist/WlasneAI.exe
+          if-no-files-found: error
+          retention-days: 30
