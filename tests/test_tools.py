@@ -128,3 +128,60 @@ def test_tool_executor_rejects_missing_schema_fields(tmp_path):
     executor = ToolExecutor(file_manager=FileManager(tmp_path / "workspace"))
     with pytest.raises(ValueError, match="wymaga pól"):
         executor.execute("write_file", {"path": "missing-content.txt"})
+
+
+
+def test_agent_tool_execution_requires_explicit_callback(tmp_path):
+    from tools.registry import ToolDefinition, ToolRegistry
+
+    registry = ToolRegistry()
+    registry.register(ToolDefinition(
+        name="dangerous_action",
+        description="A protected action",
+        parameters={"type": "object", "properties": {}, "additionalProperties": False},
+        handler=lambda args: "executed",
+        requires_approval=True,
+    ))
+    executor = ToolExecutor(
+        registry=registry,
+        granted_capabilities=set(),
+    )
+    with pytest.raises(PermissionError, match="brak aktywnego kanału"):
+        executor.execute_for_agent("dangerous_action", {})
+
+
+def test_agent_tool_execution_uses_callback_and_denies_rejection():
+    from tools.registry import ToolDefinition, ToolRegistry
+
+    registry = ToolRegistry()
+    registry.register(ToolDefinition(
+        name="dangerous_action",
+        description="A protected action",
+        parameters={"type": "object", "properties": {}, "additionalProperties": False},
+        handler=lambda args: "executed",
+        requires_approval=True,
+    ))
+    seen = []
+    executor = ToolExecutor(
+        registry=registry,
+        granted_capabilities=set(),
+        approval_callback=lambda name, args: seen.append((name, args)) or True,
+    )
+    assert executor.execute_for_agent("dangerous_action", {}) == "executed"
+    assert seen == [("dangerous_action", {})]
+
+    denied = ToolExecutor(
+        registry=registry,
+        granted_capabilities=set(),
+        approval_callback=lambda name, args: False,
+    )
+    with pytest.raises(PermissionError, match="odmówił"):
+        denied.execute_for_agent("dangerous_action", {})
+
+
+def test_code_execution_capability_is_not_granted_by_default(tmp_path, monkeypatch):
+    monkeypatch.delenv("AI_ALLOW_UNSANDBOXED_PYTHON", raising=False)
+    executor = ToolExecutor(file_manager=FileManager(tmp_path / "workspace"))
+    assert "code_execution" not in executor.granted_capabilities
+    with pytest.raises(PermissionError, match="Brak uprawnień"):
+        executor.execute("run_python", {"path": "script.py"})
