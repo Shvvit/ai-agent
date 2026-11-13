@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
@@ -60,6 +60,18 @@ def _session_view(row: dict[str, Any], directory: Path) -> dict[str, Any]:
         "directory": str(directory), "title": row["title"],
         "version": APP_VERSION,
         "time": {"created": row["created_at"], "updated": row["updated_at"]},
+    }
+
+
+def _opencode_session_view(row: dict[str, Any], directory: Path) -> dict[str, Any]:
+    return {
+        "id": row["id"],
+        "projectID": "wlasneai",
+        "cost": 0,
+        "tokens": {"input": 0, "output": 0, "reasoning": 0, "cache": {"read": 0, "write": 0}},
+        "time": {"created": row["created_at"], "updated": row["updated_at"]},
+        "title": row["title"],
+        "location": {"directory": str(directory)},
     }
 
 
@@ -146,10 +158,26 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
     async def list_sessions(directory: str | None = Query(default=None)):
         return [_session_view(row, workspace) for row in repository.list()]
 
+    @app.get("/api/session")
+    async def opencode_list_sessions(
+        limit: int | None = Query(default=None, ge=1, le=200),
+        directory: str | None = Query(default=None),
+        project: str | None = Query(default=None),
+    ):
+        rows = repository.list()
+        if limit is not None:
+            rows = rows[:limit]
+        return {"data": [_opencode_session_view(row, workspace) for row in rows], "cursor": {}}
+
     @app.post("/session")
     async def create_session(payload: SessionCreateInput):
         row = repository.create(payload.title or "New session")
         return _session_view(row, workspace)
+
+    @app.post("/api/session")
+    async def opencode_create_session(payload: SessionCreateInput):
+        row = repository.create(payload.title or "New session")
+        return {"data": _opencode_session_view(row, workspace)}
 
     @app.get("/session/{session_id}")
     async def get_session(session_id: str):
@@ -158,11 +186,24 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="Session not found")
         return _session_view(row, workspace)
 
+    @app.get("/api/session/{session_id}")
+    async def opencode_get_session(session_id: str):
+        row = repository.get(session_id)
+        if not row:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return {"data": _opencode_session_view(row, workspace)}
+
     @app.delete("/session/{session_id}")
     async def delete_session(session_id: str):
         if not repository.delete(session_id):
             raise HTTPException(status_code=404, detail="Session not found")
         return True
+
+    @app.delete("/api/session/{session_id}", status_code=204)
+    async def opencode_delete_session(session_id: str):
+        if not repository.delete(session_id):
+            raise HTTPException(status_code=404, detail="Session not found")
+        return Response(status_code=204)
 
     @app.patch("/session/{session_id}")
     async def update_session(session_id: str, payload: dict[str, Any]):

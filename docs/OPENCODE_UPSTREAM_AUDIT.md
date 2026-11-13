@@ -88,5 +88,6 @@ The pinned protocol source was rechecked at `f6e0c2d0833ffe772035f221fed923e1cd5
 - `GET /api/info` (`server.info`): version, process id, URL list, and temporary path.
 - `GET /api/project` (`project.list`): project id, canonical path, timestamps, and sandbox list.
 - `GET /api/location` (`location.get`): resolved directory and project identity.
+- `GET/POST /api/session`, `GET/DELETE /api/session/:sessionID`: session listing, creation, retrieval, and removal with the pinned `Session.Info` response envelope.
 
-The corresponding API tests assert the required response fields and values. These endpoints cover only server readiness and initial project/location discovery. Config, provider/model data, session list/create/get, and event streaming still need to match the pinned `/api/...` protocol before the UI can boot into a usable chat flow.
+The corresponding API tests assert the required response fields and values. This covers server readiness, project/location discovery, and session lifecycle. Config, provider/model data, message history/prompt execution, and event streaming still need to match the pinned `/api/...` protocol before the UI can boot into a usable chat flow.

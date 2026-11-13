@@ -69,6 +69,33 @@ def test_opencode_project_and_location_contract(tmp_path):
     }
 
 
+def test_opencode_session_lifecycle_contract(tmp_path):
+    app = create_app(tmp_path)
+    with TestClient(app) as client:
+        created = client.post("/api/session", json={"title": "OpenCode session"})
+        assert created.status_code == 200
+        session = created.json()["data"]
+        assert session["id"].startswith("ses")
+        assert session["projectID"] == "wlasneai"
+        assert session["title"] == "OpenCode session"
+        assert session["location"]["directory"] == str(tmp_path / "workspace")
+        assert session["tokens"] == {
+            "input": 0,
+            "output": 0,
+            "reasoning": 0,
+            "cache": {"read": 0, "write": 0},
+        }
+
+        session_id = session["id"]
+        listed = client.get("/api/session")
+        assert listed.status_code == 200
+        assert listed.json()["data"] == [session]
+        assert listed.json()["cursor"] == {}
+        assert client.get(f"/api/session/{session_id}").json()["data"] == session
+        assert client.delete(f"/api/session/{session_id}").status_code == 204
+        assert client.get(f"/api/session/{session_id}").status_code == 404
+
+
 def test_message_endpoint_rejects_unknown_session(tmp_path):
     app = create_app(tmp_path)
     with TestClient(app) as client:

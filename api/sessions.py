@@ -43,7 +43,7 @@ class SessionRepository:
 
     def create(self, title: str = "New session") -> dict[str, Any]:
         now = self._now()
-        item = {"id": str(uuid.uuid4()), "title": title[:120], "created_at": now, "updated_at": now}
+        item = {"id": f"ses_{uuid.uuid4().hex}", "title": title[:120], "created_at": now, "updated_at": now}
         with self._lock:
             self._db.execute(
                 "INSERT INTO opencode_sessions VALUES(?,?,?,?)",
@@ -73,7 +73,7 @@ class SessionRepository:
 
     def add_message(self, session_id: str, role: str, parts: list[dict[str, Any]], model_id: str, provider_id: str) -> dict[str, Any]:
         item = {
-            "id": str(uuid.uuid4()), "session_id": session_id, "role": role,
+            "id": f"msg_{uuid.uuid4().hex}", "session_id": session_id, "role": role,
             "model_id": model_id, "provider_id": provider_id,
             "parts": parts, "created_at": self._now(),
         }
