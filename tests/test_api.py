@@ -96,6 +96,118 @@ def test_opencode_session_lifecycle_contract(tmp_path):
         assert client.get(f"/api/session/{session_id}").status_code == 404
 
 
+def test_opencode_agent_provider_model_and_boot_catalog_contract(tmp_path, monkeypatch):
+    monkeypatch.setenv("AI_PROVIDER", "ollama")
+    monkeypatch.setenv("AI_MODEL", "qwen3:8b")
+    app = create_app(tmp_path)
+    directory = str(tmp_path / "workspace")
+    with TestClient(app) as client:
+        config = client.get("/api/config").json()
+        agents = client.get("/api/agent").json()
+        commands = client.get("/api/command").json()
+        providers = client.get("/api/provider").json()
+        models = client.get("/api/model").json()
+        default_model = client.get("/api/model/default").json()
+
+    assert config == {"location": {"directory": directory}, "data": []}
+    assert commands == {"location": {"directory": directory}, "data": []}
+    assert agents["location"]["directory"] == directory
+    assert agents["data"][0]["id"] == "wlasneai"
+    assert agents["data"][0]["request"] == {"settings": {}, "headers": {}, "body": {}}
+    assert agents["data"][0]["mode"] == "primary"
+    assert agents["data"][0]["permissions"] == []
+
+    assert providers["location"]["directory"] == directory
+    assert {item["id"] for item in providers["data"]} == {"ollama", "openrouter", "openai_compatible"}
+    assert models["location"]["directory"] == directory
+    model = models["data"][0]
+    assert model["id"] == "qwen3:8b"
+    assert model["providerID"] == "ollama"
+    assert model["capabilities"] == {"tools": True, "input": ["text"], "output": ["text"]}
+    assert default_model["data"] == model
+
+
+def test_opencode_message_history_contract(tmp_path, monkeypatch):
+    from api import app as api_app
+
+    monkeypatch.setenv("AI_PROVIDER", "ollama")
+    monkeypatch.setenv("AI_MODEL", "qwen3:8b")
+
+    class FakeAgent:
+        def __init__(self, **kwargs):
+            pass
+
+        def run(self, prompt):
+            return f"Odpowiedź: {prompt}"
+
+    monkeypatch.setattr(api_app, "BaseAgent", FakeAgent)
+    monkeypatch.setattr(api_app, "build_model", lambda config: object())
+    app = create_app(tmp_path)
+    with TestClient(app) as client:
+        session_id = client.post("/api/session", json={}).json()["data"]["id"]
+        client.post(
+            f"/session/{session_id}/message",
+            json={"parts": [{"type": "text", "text": "Cześć"}]},
+        )
+        response = client.get(f"/api/session/{session_id}/message")
+
+    assert response.status_code == 200
+    messages = response.json()["data"]
+    assert [item["type"] for item in messages] == ["user", "assistant"]
+    assert messages[0]["text"] == "Cześć"
+    assert messages[1]["content"] == [{"type": "text", "text": "Odpowiedź: Cześć"}]
+    assert messages[1]["model"] == {"id": "qwen3:8b", "providerID": "ollama"}
+
+
+def test_opencode_prompt_runs_agent_and_emits_protocol_events(tmp_path, monkeypatch):
+    from api import app as api_app
+
+    monkeypatch.setenv("AI_PROVIDER", "ollama")
+    monkeypatch.setenv("AI_MODEL", "qwen3:8b")
+
+    class FakeAgent:
+        def __init__(self, **kwargs):
+            pass
+
+        def run(self, prompt):
+            return f"Odpowiedź: {prompt}"
+
+    monkeypatch.setattr(api_app, "BaseAgent", FakeAgent)
+    monkeypatch.setattr(api_app, "build_model", lambda config: object())
+    app = create_app(tmp_path)
+    events = []
+
+    async def capture_event(event):
+        events.append(event)
+
+    app.state.event_hub.publish = capture_event
+    with TestClient(app) as client:
+        session_id = client.post("/api/session", json={}).json()["data"]["id"]
+        response = client.post(
+            f"/api/session/{session_id}/prompt",
+            json={"id": "msg_test-prompt", "text": "Cześć"},
+        )
+        history = client.get(f"/api/session/{session_id}/message").json()["data"]
+
+    assert response.status_code == 200
+    assert response.json()["data"]["id"] == "msg_test-prompt"
+    assert [item["type"] for item in history] == ["user", "assistant"]
+    assert history[1]["content"] == [{"type": "text", "text": "Odpowiedź: Cześć"}]
+    assert [item["type"] for item in events] == [
+        "session.inbox.enqueued",
+        "session.inbox.delivered",
+        "session.execution.started",
+        "session.step.started",
+        "session.text.started",
+        "session.text.delta",
+        "session.text.ended",
+        "session.step.ended",
+        "session.execution.succeeded",
+    ]
+    durable = [item for item in events if item["type"] != "session.text.delta"]
+    assert [item["durable"]["seq"] for item in durable] == list(range(1, len(durable) + 1))
+
+
 def test_message_endpoint_rejects_unknown_session(tmp_path):
     app = create_app(tmp_path)
     with TestClient(app) as client:

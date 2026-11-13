@@ -35,6 +35,18 @@ class SessionRepository:
             CREATE INDEX IF NOT EXISTS idx_opencode_messages_session
             ON opencode_messages(session_id, created_at);
         """)
+        # Upgrade IDs from early bridge builds so they satisfy the pinned
+        # OpenCode protocol without losing the associated local history.
+        with self._lock:
+            sessions = self._db.execute("SELECT id FROM opencode_sessions WHERE id NOT LIKE 'ses%'").fetchall()
+            for row in sessions:
+                old_id = row["id"]
+                new_id = f"ses_{old_id}"
+                self._db.execute("UPDATE opencode_messages SET session_id=? WHERE session_id=?", (new_id, old_id))
+                self._db.execute("UPDATE opencode_sessions SET id=? WHERE id=?", (new_id, old_id))
+            messages = self._db.execute("SELECT id FROM opencode_messages WHERE substr(id,1,4) != 'msg_'").fetchall()
+            for row in messages:
+                self._db.execute("UPDATE opencode_messages SET id=? WHERE id=?", (f"msg_{row['id']}", row["id"]))
         self._db.commit()
 
     @staticmethod
@@ -71,9 +83,17 @@ class SessionRepository:
             self._db.commit()
         return cursor.rowcount > 0
 
-    def add_message(self, session_id: str, role: str, parts: list[dict[str, Any]], model_id: str, provider_id: str) -> dict[str, Any]:
+    def add_message(
+        self,
+        session_id: str,
+        role: str,
+        parts: list[dict[str, Any]],
+        model_id: str,
+        provider_id: str,
+        message_id: str | None = None,
+    ) -> dict[str, Any]:
         item = {
-            "id": f"msg_{uuid.uuid4().hex}", "session_id": session_id, "role": role,
+            "id": message_id or f"msg_{uuid.uuid4().hex}", "session_id": session_id, "role": role,
             "model_id": model_id, "provider_id": provider_id,
             "parts": parts, "created_at": self._now(),
         }
@@ -90,7 +110,7 @@ class SessionRepository:
     def messages(self, session_id: str) -> list[dict[str, Any]]:
         with self._lock:
             rows = self._db.execute(
-                "SELECT * FROM opencode_messages WHERE session_id=? ORDER BY created_at,id",
+                "SELECT * FROM opencode_messages WHERE session_id=? ORDER BY created_at,rowid",
                 (session_id,),
             ).fetchall()
         return [{

@@ -75,6 +75,7 @@ jobs:
           if-no-files-found: error
           retention-days: 30
       - name: Publish executable to GitHub Releases
+        if: github.ref == 'refs/heads/master'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
