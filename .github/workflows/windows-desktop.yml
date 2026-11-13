@@ -104,6 +104,37 @@ jobs:
       - name: Package original OpenCode Electron desktop with WlasneAI sidecar
         working-directory: upstream/opencode
         run: bun run --cwd packages/desktop pack
+      - name: Smoke-test Electron startup and sidecar connection
+        shell: pwsh
+        run: |
+          $env:XDG_STATE_HOME = Join-Path $env:RUNNER_TEMP "wlasneai-electron-state"
+          $registrationPath = Join-Path $env:XDG_STATE_HOME "opencode/service.json"
+          $stdoutPath = Join-Path $env:RUNNER_TEMP "wlasneai-electron.stdout.log"
+          $stderrPath = Join-Path $env:RUNNER_TEMP "wlasneai-electron.stderr.log"
+          Remove-Item -LiteralPath $env:XDG_STATE_HOME -Recurse -Force -ErrorAction SilentlyContinue
+          $appPath = "upstream/opencode/dist/desktop/app/OpenCode Dev.exe"
+          $process = Start-Process -FilePath $appPath -ArgumentList @("--disable-gpu", "--no-sandbox") -PassThru -WindowStyle Hidden -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+          $registration = $null
+          try {
+            $deadline = (Get-Date).AddSeconds(90)
+            while ((Get-Date) -lt $deadline) {
+              if ($process.HasExited) { throw "Electron exited early with code $($process.ExitCode)" }
+              if (Test-Path -LiteralPath $registrationPath) {
+                try { $registration = Get-Content -LiteralPath $registrationPath -Raw | ConvertFrom-Json } catch { $registration = $null }
+                if ($registration) { break }
+              }
+              Start-Sleep -Milliseconds 500
+            }
+            if (!$registration) { throw "Electron did not start the WlasneAI sidecar" }
+            if ($registration.version -ne "2.3.0") { throw "Electron connected to a sidecar with an unexpected version" }
+            $info = Invoke-RestMethod -Uri "$($registration.url)/api/info" -TimeoutSec 10
+            if ($info.pid -ne $registration.pid -or $info.version -ne "2.3.0") { throw "Electron sidecar readiness check failed" }
+          }
+          finally {
+            if ($registration -and $registration.pid -gt 0) { & taskkill.exe /PID $registration.pid /T /F | Out-Null }
+            if (!$process.HasExited) { & taskkill.exe /PID $process.Id /T /F | Out-Null; $process.WaitForExit(10000) }
+          }
+          if (Test-Path -LiteralPath $stderrPath) { Get-Content -LiteralPath $stderrPath }
       - name: Verify executable exists
         shell: pwsh
         run: |
