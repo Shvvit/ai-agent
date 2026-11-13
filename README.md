@@ -64,6 +64,34 @@ Dodatkowe ustawienia:
 
 Nie commituj prawdziwych kluczy API. Plik .env.example jest tylko wzorem; obecna konfiguracja czyta zmienne środowiskowe systemu. Uruchamianie wygenerowanego kodu Python jest domyślnie zablokowane, ponieważ subprocess nie jest piaskownicą. Aby jawnie włączyć uruchamianie zaufanego kodu, ustaw `$env:AI_ALLOW_UNSANDBOXED_PYTHON="1"` w PowerShell. Nie włączaj tego dla nieznanego kodu.
 
+## Aplikacja desktopowa Windows
+
+Projekt ma aplikację graficzną inspirowaną układem OpenCode: panel historii sesji,
+obszar rozmowy, wybór modelu, pole polecenia i status pracy agenta.
+
+Uruchomienie z kodu źródłowego (Python 3.12):
+
+~~~powershell
+python -m pip install -e ".[desktop]"
+python -m apps.desktop.main
+~~~
+
+Aplikacja używa Ollama i domyślnego modelu `qwen3:8b`. Ollama musi być
+uruchomiona lokalnie. W ustawieniach można zmienić dostawcę, nazwę modelu
+i endpoint. Klucz API jest zapisywany w Menedżerze poświadczeń Windows
+przez bibliotekę keyring; nie jest zapisywany w pliku ustawień aplikacji.
+
+Aplikacja zapisuje sesje, pamięć i historię zadań w
+`%APPDATA%\\WlasneAI`, a pliki agenta w podkatalogu `workspace`.
+Uruchamianie kodu Python pozostaje wyłączone domyślnie.
+
+Plik EXE jest budowany automatycznie przez GitHub Actions dla gałęzi
+`feature/agent-zero-integration`. Otwórz zakładkę Actions, wybierz
+workflow **Windows desktop build**, a następnie pobierz artefakt
+`WlasneAI-Windows-x64` z ukończonego uruchomienia. To jest pojedynczy
+plik `WlasneAI.exe`; pierwsze uruchomienie może trwać dłużej z powodu
+rozpakowywania PyInstaller.
+
 ## Testy
 
 ~~~bash
