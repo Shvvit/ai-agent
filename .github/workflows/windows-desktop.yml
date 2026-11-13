@@ -108,11 +108,11 @@ jobs:
         shell: pwsh
         run: |
           if (!(Test-Path "dist/WlasneAI.exe")) { throw "WlasneAI.exe was not produced" }
-          if (!(Test-Path "upstream/opencode/dist/desktop/app/opencode.exe")) { throw "OpenCode Electron desktop was not packaged" }
+          if (!(Test-Path "upstream/opencode/dist/desktop/app/OpenCode Dev.exe")) { throw "OpenCode Electron desktop was not packaged" }
           if (!(Test-Path "upstream/opencode/dist/desktop/app/resources/opencode-cli.exe")) { throw "WlasneAI sidecar is missing from Electron package" }
           if ((Get-Content "upstream/opencode/dist/desktop/app/resources/opencode-cli.version" -Raw).Trim() -ne "2.3.0") { throw "Sidecar version does not match pinned OpenCode CLI" }
           Get-Item "dist/WlasneAI.exe" | Format-List Name,Length,LastWriteTime
-          Get-Item "dist/desktop/app/opencode.exe" | Format-List Name,Length,LastWriteTime
+          Get-Item "upstream/opencode/dist/desktop/app/OpenCode Dev.exe" | Format-List Name,Length,LastWriteTime
       - name: Upload Windows executable
         uses: actions/upload-artifact@v4
         with:
