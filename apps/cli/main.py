@@ -3,6 +3,7 @@ from __future__ import annotations
 from core.engine import AgentEngine
 from core.task_manager import TaskManager
 from memory.manager import MemoryManager
+from security.approval import ConsoleApproval
 
 
 def main() -> None:
@@ -16,6 +17,7 @@ def main() -> None:
     memory = MemoryManager()
     tasks = TaskManager()
     engine = AgentEngine(memory=memory, task_manager=tasks)
+    engine.agent.tools.approval_callback = ConsoleApproval().approve
     try:
         while True:
             try:
