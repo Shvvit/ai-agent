@@ -139,16 +139,16 @@ class ModelSettingsDialog(QDialog):
         self.provider.addItem("Ollama (lokalnie)", "ollama")
         self.provider.addItem("OpenRouter", "openrouter")
         self.provider.addItem("OpenAI compatible", "openai_compatible")
-        current_provider = str(settings.value("provider", "ollama"))
+        current_provider = str(settings.value("provider", os.getenv("AI_PROVIDER", "ollama"))).strip().lower()
         idx = self.provider.findData(current_provider)
         self.provider.setCurrentIndex(max(0, idx))
 
-        self.model = QLineEdit(str(settings.value("model", "qwen3:8b")))
-        self.host = QLineEdit(str(settings.value("host", "http://127.0.0.1:11434")))
+        self.model = QLineEdit(str(settings.value("model", os.getenv("AI_MODEL", "qwen3:8b"))))
+        self.host = QLineEdit(str(settings.value("host", os.getenv("AI_HOST", os.getenv("AI_BASE_URL", "http://127.0.0.1:11434")))))
         self.api_key = QLineEdit()
         self.api_key.setEchoMode(QLineEdit.EchoMode.Password)
         self.api_key.setPlaceholderText("Pozostaw puste, aby użyć zmiennej środowiskowej")
-        self.temperature = QLineEdit(str(settings.value("temperature", "0.2")))
+        self.temperature = QLineEdit(str(settings.value("temperature", os.getenv("AI_TEMPERATURE", "0.2"))))
 
         form.addRow("Dostawca", self.provider)
         form.addRow("Model", self.model)
@@ -348,7 +348,7 @@ class MainWindow(QMainWindow):
         self.model_combo.setEditable(True)
         self.model_combo.setMinimumWidth(190)
         self.model_combo.addItems(["qwen3:8b"])
-        self.model_combo.setCurrentText(str(self.settings.value("model", "qwen3:8b")))
+        self.model_combo.setCurrentText(str(self.settings.value("model", os.getenv("AI_MODEL", "qwen3:8b"))))
         self.model_combo.setToolTip("Wybierz nazwę modelu")
         self.model_combo.currentTextChanged.connect(self._model_changed)
         top_layout.addWidget(self.model_combo)
@@ -436,10 +436,10 @@ class MainWindow(QMainWindow):
         return super().eventFilter(watched, event)
 
     def _refresh_model_label(self) -> None:
-        provider = str(self.settings.value("provider", "ollama")).upper()
+        provider = str(self.settings.value("provider", os.getenv("AI_PROVIDER", "ollama"))).upper()
         self.provider_label.setText(provider.replace("_COMPATIBLE", " API"))
         self.model_combo.blockSignals(True)
-        self.model_combo.setCurrentText(str(self.settings.value("model", "qwen3:8b")))
+        self.model_combo.setCurrentText(str(self.settings.value("model", os.getenv("AI_MODEL", "qwen3:8b"))))
         self.model_combo.blockSignals(False)
 
     def _model_changed(self, value: str) -> None:
@@ -448,14 +448,14 @@ class MainWindow(QMainWindow):
             self.settings.setValue("model", value)
 
     def _model_config(self) -> ModelConfig:
-        provider = str(self.settings.value("provider", "ollama"))
-        model = self.model_combo.currentText().strip() or "qwen3:8b"
+        provider = str(self.settings.value("provider", os.getenv("AI_PROVIDER", "ollama")))
+        model = self.model_combo.currentText().strip() or os.getenv("AI_MODEL", "qwen3:8b")
         defaults = {
             "ollama": "http://127.0.0.1:11434",
             "openrouter": "https://openrouter.ai/api/v1",
             "openai_compatible": "https://api.openai.com/v1",
         }
-        host = str(self.settings.value("host", defaults[provider]))
+        host = str(self.settings.value("host", os.getenv("AI_HOST", os.getenv("AI_BASE_URL", defaults[provider]))))
         api_key = os.getenv("AI_API_KEY") or os.getenv("OPENROUTER_API_KEY")
         if provider != "ollama":
             try:
@@ -467,7 +467,7 @@ class MainWindow(QMainWindow):
             provider=provider,
             model=model,
             host=host,
-            temperature=float(self.settings.value("temperature", 0.2)),
+            temperature=float(self.settings.value("temperature", os.getenv("AI_TEMPERATURE", 0.2))),
             api_key=api_key,
         )
 
