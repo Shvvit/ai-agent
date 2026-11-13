@@ -5,7 +5,9 @@ on:
     branches:
       - feature/agent-zero-integration
     paths:
-      - "apps/desktop/**"\n      - "tests/**"\n      - "README.md"
+      - "apps/desktop/**"
+      - "tests/**"
+      - "README.md"
       - "agents/**"
       - "config/**"
       - "core/**"
