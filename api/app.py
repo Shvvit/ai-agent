@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import os
-import re
-import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -13,7 +11,7 @@ from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 from agents.base import BaseAgent, build_model
-from api.schemas import MessageInput, MessageOutput, SessionCreateInput
+from api.schemas import MessageInput, SessionCreateInput
 from api.sessions import SessionRepository
 from config.model_config import ModelConfig
 from memory.manager import MemoryManager
@@ -163,7 +161,7 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
         if not prompt:
             raise HTTPException(status_code=400, detail="Wiadomość nie może być pusta.")
         cfg, provider_id, model_id = _model_settings(payload.model)
-        user_message = repository.add_message(
+        repository.add_message(
             session_id, "user", [{"type": "text", "text": prompt}], model_id, provider_id
         )
         history = []
@@ -182,7 +180,6 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
         assistant_message = repository.add_message(
             session_id, "assistant", [{"type": "text", "text": answer}], model_id, provider_id
         )
-        now_user = user_message["created_at"]
         return {
             "info": {
                 "id": assistant_message["id"], "sessionID": session_id, "role": "assistant",
