@@ -145,6 +145,30 @@ CLI zapisuje przebieg zadań w SQLite (`data/tasks.sqlite3`). Dostępne poleceni
 Statusy są kontrolowane przez maszynę stanów: `queued`, `running`, `paused`,
 `completed`, `failed`, `cancelled`. Polecenie `/retry ID` ponawia zadanie o statusie failed, paused lub running od początku. Nie odtwarza jeszcze dokładnego checkpointu przerwanego procesu.
 
+## Lokalny most API dla interfejsu OpenCode
+
+Backend WlasneAI udostępnia eksperymentalny most HTTP zgodny z podstawowymi
+trasami używanymi przez klienta OpenCode. Dane sesji i wiadomości są zapisywane
+w bazie SQLite w katalogu danych aplikacji.
+
+Uruchomienie samego mostu:
+
+~~~powershell
+python -m api.server
+~~~
+
+Most nasłuchuje wyłącznie na `127.0.0.1` i wybiera wolny port. Adres jest
+wypisywany w terminalu i ustawiany w zmiennej procesu
+`OPENCODE_SERVER_URL`. Wbudowany launcher Pythona można wykorzystać później
+przez proces Electron jako sidecar.
+
+To jeszcze nie jest gotowa integracja Electron: workflow CI kompiluje oryginalny
+renderer OpenCode, ale bieżący instalator Windows nadal buduje dotychczasową
+aplikację PySide6. Następny etap to spięcie procesu Electron z mostem API,
+mapowanie pełnego kontraktu zdarzeń/streamingu i dopiero potem wspólne
+pakowanie obu procesów. Stary EXE pozostaje niezależny do czasu testów
+akceptacyjnych nowej aplikacji.
+
 ## Agent Zero jako upstream
 
 Pełne źródła upstream są przypięte jako submodule w vendor/agent-zero do konkretnego commita. Aby pobrać je razem z projektem z tej gałęzi:
