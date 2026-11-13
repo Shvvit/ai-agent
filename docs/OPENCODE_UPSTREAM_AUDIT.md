@@ -46,3 +46,37 @@ The full upstream repository is now attached as a Git submodule at `upstream/ope
 This makes the complete original OpenCode UI and desktop source available in the WlasneAI repository without flattening or losing upstream history. It is a source import, not yet a working WlasneAI desktop integration: the Python compatibility service, Electron sidecar lifecycle, WlasneAI-specific UI adaptations, and combined Windows packaging remain to be implemented and tested.
 
 The next code milestone is to make the pinned upstream desktop workspace build reproducibly on Windows CI, then implement the Python compatibility bridge against the exact pinned API contracts.
+
+
+## Follow-up audit: desktop sidecar and API contract (2026-11-13)
+
+The pinned upstream desktop already has a first-class sidecar connection path. Relevant upstream files at the pinned commit:
+
+- `packages/desktop/src/main/service/sidecar-probe.ts`: discovers an already-running compatible service in packaged mode.
+- `packages/desktop/src/main/service/sidecar-credentials.ts`: stores the sidecar endpoint and password in the Electron main process, and derives Basic authorization only for requests to that endpoint.
+- `packages/app/src/runtime/server/registry.tsx`: models the built-in desktop server as a `sidecar` connection and marks it as local.
+- `packages/app/src/runtime/server/client.tsx`: creates the API transport for the sidecar and supports endpoint changes/reconnects.
+- `packages/app/src/runtime/server/api.ts`: constructs the generated OpenCode API client against the selected base URL.
+- `packages/app/src/runtime/server/health.ts`: probes the server using the generated `server.info` endpoint, not the custom `/global/health` endpoint.
+
+This confirms the intended integration direction: package WlasneAI's Python process as the desktop sidecar, then feed its endpoint to the existing sidecar connection lifecycle. Merely setting `OPENCODE_SERVER_URL` in the Python process is not sufficient to register it with Electron's sidecar lifecycle.
+
+### Compatibility gaps found in the first bridge implementation
+
+The current `api/app.py` is a useful smoke-test bridge, not yet an OpenCode-compatible server. The original desktop uses the generated client from `packages/client` and calls a much broader typed API. In particular:
+
+- Health checks use `GET /server` (the generated `server.info` operation), so `GET /global/health` alone cannot make the desktop consider the bridge healthy.
+- The UI's message submission path is based on the generated session prompt/message operations and typed response/event contracts; the current synchronous `POST /session/{id}/message` implementation is not yet proven compatible.
+- The renderer consumes a live event stream and session lifecycle events. The current SSE endpoint emits only `server.connected` once and does not publish message/session updates.
+- Provider/model and agent responses must match the exact generated schemas, not just be plausible JSON with similar field names.
+- The desktop uses additional project/location/config, file, permission, command, and session endpoints during normal navigation and interaction. These must be inventoried from the pinned client contract before declaring compatibility.
+
+### Updated implementation sequence
+
+1. Add a contract inventory from the pinned `packages/client/src/contract.ts` and generated API schema. For every operation used during initial desktop boot and chat, record method, path, query/body schema, response schema, and whether it is required or optional.
+2. Implement the minimum boot contract first: server info, location, project, path, config, provider/model, agent, command, session list/create/get, and event subscription.
+3. Implement streaming prompt execution and event emission with stable OpenCode message/part IDs. Preserve WlasneAI's own model routing and agent execution.
+4. Add a sidecar launcher in the Electron main process that starts the packaged Python runtime, waits for a readiness handshake, supplies endpoint credentials through the existing sidecar mechanism, monitors process exit, and shuts down cleanly.
+5. Expand API coverage for tools, files, permissions, cancellation, and other UI features only after the boot + chat flow passes end-to-end tests.
+
+Do not treat the existing Windows build as proof of UI compatibility: it currently proves only that the upstream desktop workspace can be built in CI.
