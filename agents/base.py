@@ -395,7 +395,11 @@ class BaseAgent:
                     limit_reached = True
                 else:
                     try:
-                        output = self.tools.execute(call.name, call.arguments)
+                        execute_for_agent = getattr(self.tools, "execute_for_agent", None)
+                        if callable(execute_for_agent):
+                            output = execute_for_agent(call.name, call.arguments)
+                        else:
+                            output = self.tools.execute(call.name, call.arguments)
                     except Exception as exc:
                         output = f"Błąd narzędzia: {type(exc).__name__}: {exc}"
                     calls_executed += 1
