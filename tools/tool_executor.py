@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+import os
+from typing import Any, Callable
 
 from tools.file_manager import FileManager
 from tools.registry import ToolDefinition, ToolRegistry
@@ -18,15 +19,22 @@ class ToolExecutor:
         agent_team=None,
         registry: ToolRegistry | None = None,
         granted_capabilities: set[str] | None = None,
+        approval_callback: Callable[[str, dict[str, Any]], bool] | None = None,
     ) -> None:
         self.files = file_manager or FileManager()
         self.tests = test_runner or TestRunner(workspace=self.files.workspace)
         self.agent_team = agent_team
+        self.approval_callback = approval_callback
+        if approval_callback is not None and not callable(approval_callback):
+            raise TypeError("approval_callback musi być funkcją.")
         self.registry = registry or ToolRegistry()
+        default_capabilities = {"workspace_read", "workspace_write", "agent_delegation"}
+        if os.getenv("AI_ALLOW_UNSANDBOXED_PYTHON", "").strip() == "1":
+            default_capabilities.add("code_execution")
         self.granted_capabilities = (
             set(granted_capabilities)
             if granted_capabilities is not None
-            else {"workspace_read", "workspace_write", "code_execution", "agent_delegation"}
+            else default_capabilities
         )
         if registry is None:
             self._register_builtin_tools()
@@ -148,6 +156,22 @@ class ToolExecutor:
             granted_capabilities=self.granted_capabilities,
             approved=approved,
         )
+
+    def execute_for_agent(self, name: str, arguments: dict[str, Any]) -> str:
+        """Execute a model-requested tool, requiring a separate user decision when configured."""
+        approved = False
+        if self.registry.requires_approval(name):
+            if self.approval_callback is None:
+                raise PermissionError(
+                    f"Narzędzie {name} wymaga zgody użytkownika, ale nie ma aktywnego kanału zatwierdzania."
+                )
+            decision = self.approval_callback(name, dict(arguments))
+            if not isinstance(decision, bool):
+                raise TypeError("Kanał zatwierdzania musi zwracać bool.")
+            if not decision:
+                raise PermissionError(f"Użytkownik odmówił wykonania narzędzia {name}.")
+            approved = True
+        return self.execute(name, arguments, approved=approved)
 
     def execute_json(self, name: str, arguments_json: str) -> str:
         arguments = json.loads(arguments_json)
