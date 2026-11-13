@@ -19,6 +19,9 @@ on:
       - ".github/workflows/windows-desktop.yml"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 concurrency:
   group: windows-desktop-${{ github.ref }}
   cancel-in-progress: true
@@ -56,3 +59,15 @@ jobs:
           path: dist/WlasneAI.exe
           if-no-files-found: error
           retention-days: 30
+      - name: Publish executable to GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          gh release view desktop-latest --repo $env:GITHUB_REPOSITORY 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create desktop-latest --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title "WlasneAI Desktop (latest)" --notes "Automatycznie zbudowana wersja Windows x64. Pobierz WlasneAI.exe i uruchom na Windows 10/11."
+            if ($LASTEXITCODE -ne 0) { throw "Nie udało się utworzyć GitHub Release" }
+          }
+          gh release upload desktop-latest dist/WlasneAI.exe --repo $env:GITHUB_REPOSITORY --clobber
+          if ($LASTEXITCODE -ne 0) { throw "Nie udało się opublikować WlasneAI.exe w GitHub Releases" }
