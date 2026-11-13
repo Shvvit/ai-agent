@@ -108,6 +108,8 @@ jobs:
         shell: pwsh
         run: |
           $env:XDG_STATE_HOME = Join-Path $env:RUNNER_TEMP "wlasneai-electron-state"
+          $env:APPDATA = Join-Path $env:RUNNER_TEMP "wlasneai-electron-appdata"
+          $env:ELECTRON_ENABLE_LOGGING = "1"
           $registrationPath = Join-Path $env:XDG_STATE_HOME "opencode/service.json"
           $stdoutPath = Join-Path $env:RUNNER_TEMP "wlasneai-electron.stdout.log"
           $stderrPath = Join-Path $env:RUNNER_TEMP "wlasneai-electron.stderr.log"
@@ -133,8 +135,12 @@ jobs:
           finally {
             if ($registration -and $registration.pid -gt 0) { & taskkill.exe /PID $registration.pid /T /F | Out-Null }
             if (!$process.HasExited) { & taskkill.exe /PID $process.Id /T /F | Out-Null; $process.WaitForExit(10000) }
+            if (Test-Path -LiteralPath $env:APPDATA) {
+              Get-ChildItem -LiteralPath $env:APPDATA -Filter "main.log" -File -Recurse -ErrorAction SilentlyContinue | ForEach-Object { Get-Content -LiteralPath $_.FullName -Tail 200 }
+            }
+            if (Test-Path -LiteralPath $stdoutPath) { Get-Content -LiteralPath $stdoutPath -Tail 100 }
+            if (Test-Path -LiteralPath $stderrPath) { Get-Content -LiteralPath $stderrPath -Tail 100 }
           }
-          if (Test-Path -LiteralPath $stderrPath) { Get-Content -LiteralPath $stderrPath }
       - name: Verify executable exists
         shell: pwsh
         run: |
