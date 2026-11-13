@@ -528,9 +528,17 @@ class MainWindow(QMainWindow):
         while self.messages_layout.count():
             item = self.messages_layout.takeAt(0)
             widget = item.widget()
+            if widget is self.welcome:
+                continue
             if widget is not None:
                 widget.deleteLater()
         self.messages_layout.addStretch(1)
+        has_messages = bool(self.store.get_messages(self.current_session)) if self.current_session else False
+        if has_messages:
+            self.welcome.hide()
+        else:
+            self.welcome.show()
+            self.messages_layout.insertWidget(0, self.welcome)
 
     def _add_message(self, role: str, content: str) -> None:
         if self.welcome:
