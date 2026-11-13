@@ -1,3 +1,7 @@
 [submodule "vendor/agent-zero"]
 	path = vendor/agent-zero
 	url = https://github.com/agent0ai/agent-zero.git
+
+[submodule "upstream/opencode"]
+	path = upstream/opencode
+	url = https://github.com/anomalyco/opencode.git
