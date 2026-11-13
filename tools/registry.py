@@ -168,3 +168,10 @@ class ToolRegistry:
         if not isinstance(result, str):
             raise TypeError(f"Narzędzie {name} musi zwracać tekst.")
         return result
+
+    def requires_approval(self, name: str) -> bool:
+        """Return whether a registered tool requires a separate user decision."""
+        tool = self._tools.get(name)
+        if tool is None:
+            raise ValueError(f"Nieznane narzędzie: {name}")
+        return tool.requires_approval
