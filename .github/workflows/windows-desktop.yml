@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/agent-zero-integration
+      - feature/opencode-native-ui
     paths:
       - "apps/desktop/**"
       - "tests/**"
