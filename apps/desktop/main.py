@@ -446,6 +446,12 @@ class MainWindow(QMainWindow):
         value = value.strip()
         if value:
             self.settings.setValue("model", value)
+            if self.agent is not None and not self._busy():
+                try:
+                    self.agent.model = build_model(self._model_config())
+                    self.status_label.setText("Model: " + value)
+                except Exception as exc:
+                    self.status_label.setText(f"Nie można zmienić modelu: {exc}")
 
     def _model_config(self) -> ModelConfig:
         provider = str(self.settings.value("provider", os.getenv("AI_PROVIDER", "ollama")))
@@ -566,6 +572,11 @@ class MainWindow(QMainWindow):
         if self.agent is None:
             try:
                 self.agent = self._new_agent()
+                self.agent.history = [
+                    {"role": item["role"], "content": item["content"]}
+                    for item in self.store.get_messages(self.current_session)
+                    if item["role"] in {"user", "assistant"}
+                ][-self.agent.max_history_messages:]
             except Exception as exc:
                 QMessageBox.critical(self, "Nie można uruchomić modelu", str(exc))
                 return
@@ -597,6 +608,9 @@ class MainWindow(QMainWindow):
         self.thread.finished.connect(self._cleanup_worker)
         self.send_button.setEnabled(False)
         self.new_button.setEnabled(False)
+        self.model_combo.setEnabled(False)
+        self.settings_button.setEnabled(False)
+        self.session_list.setEnabled(False)
         self.status_label.setText("Agent pracuje…")
         self.thread.start()
 
@@ -624,6 +638,9 @@ class MainWindow(QMainWindow):
     def _cleanup_worker(self) -> None:
         self.send_button.setEnabled(True)
         self.new_button.setEnabled(True)
+        self.model_combo.setEnabled(True)
+        self.settings_button.setEnabled(True)
+        self.session_list.setEnabled(True)
         if self.thread:
             self.thread.deleteLater()
         if self.worker:
