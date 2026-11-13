@@ -194,7 +194,7 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
     @app.get("/event")
     async def events():
         async def stream():
-            yield 'data: {"type":"server.connected","properties":{}}\\n\\n'
+            yield 'data: {"type":"server.connected","properties":{}}\n\n'
         return StreamingResponse(stream(), media_type="text/event-stream")
 
     @app.get("/provider")
