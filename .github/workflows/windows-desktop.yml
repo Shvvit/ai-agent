@@ -62,16 +62,68 @@ jobs:
       - name: Build Windows executable
         run: |
           python -m PyInstaller --noconfirm --clean --onefile --windowed --name WlasneAI --collect-all PySide6 --collect-all shiboken6 --collect-all keyring --hidden-import keyring.backends.Windows --collect-submodules agents --collect-submodules models --collect-submodules tools --collect-submodules core --collect-submodules config --collect-submodules memory --collect-submodules security apps/desktop/main.py
+      - name: Build WlasneAI sidecar for the original Electron desktop
+        run: |
+          python -m PyInstaller --noconfirm --clean --onefile --console --name opencode-cli --collect-submodules agents --collect-submodules api --collect-submodules models --collect-submodules tools --collect-submodules core --collect-submodules config --collect-submodules memory --collect-submodules security --collect-submodules storage --collect-submodules sandbox apps/sidecar_cli.py
+          Copy-Item dist/opencode-cli.exe upstream/opencode/packages/desktop/resources/opencode-cli.exe
+          Set-Content -NoNewline -Encoding ascii upstream/opencode/packages/desktop/resources/opencode-cli.version "2.3.0"
+      - name: Smoke-test packaged WlasneAI sidecar protocol
+        shell: pwsh
+        run: |
+          $env:XDG_STATE_HOME = Join-Path $env:RUNNER_TEMP "wlasneai-sidecar-state"
+          $registrationPath = Join-Path $env:XDG_STATE_HOME "opencode/service.json"
+          $stdoutPath = Join-Path $env:RUNNER_TEMP "wlasneai-sidecar.stdout.log"
+          $stderrPath = Join-Path $env:RUNNER_TEMP "wlasneai-sidecar.stderr.log"
+          Remove-Item -LiteralPath $env:XDG_STATE_HOME -Recurse -Force -ErrorAction SilentlyContinue
+          $process = Start-Process -FilePath "dist/opencode-cli.exe" -ArgumentList @("serve", "--service") -PassThru -WindowStyle Hidden -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+          try {
+            $registration = $null
+            $deadline = (Get-Date).AddSeconds(45)
+            while ((Get-Date) -lt $deadline) {
+              if ($process.HasExited) { throw "Sidecar exited early with code $($process.ExitCode)" }
+              if (Test-Path -LiteralPath $registrationPath) {
+                try { $registration = Get-Content -LiteralPath $registrationPath -Raw | ConvertFrom-Json } catch { $registration = $null }
+                if ($registration) { break }
+              }
+              Start-Sleep -Milliseconds 250
+            }
+            if (!$registration) { throw "Sidecar did not publish its service registration" }
+            if ($registration.pid -le 0) { throw "Registration PID is invalid" }
+            if ($registration.version -ne "2.3.0") { throw "Registration version does not match pinned OpenCode" }
+            $info = Invoke-RestMethod -Uri "$($registration.url)/api/info" -TimeoutSec 10
+            if ($info.pid -ne $registration.pid -or $info.version -ne "2.3.0") { throw "Sidecar readiness response does not match registration" }
+          }
+          finally {
+            if (!$process.HasExited) {
+              & taskkill.exe /PID $process.Id /T /F | Out-Null
+              $process.WaitForExit(10000)
+            }
+          }
+          if (Test-Path -LiteralPath $stderrPath) { Get-Content -LiteralPath $stderrPath }
+      - name: Package original OpenCode Electron desktop with WlasneAI sidecar
+        working-directory: upstream/opencode
+        run: bun run --cwd packages/desktop pack
       - name: Verify executable exists
         shell: pwsh
         run: |
           if (!(Test-Path "dist/WlasneAI.exe")) { throw "WlasneAI.exe was not produced" }
+          if (!(Test-Path "upstream/opencode/dist/desktop/app/opencode.exe")) { throw "OpenCode Electron desktop was not packaged" }
+          if (!(Test-Path "upstream/opencode/dist/desktop/app/resources/opencode-cli.exe")) { throw "WlasneAI sidecar is missing from Electron package" }
+          if ((Get-Content "upstream/opencode/dist/desktop/app/resources/opencode-cli.version" -Raw).Trim() -ne "2.3.0") { throw "Sidecar version does not match pinned OpenCode CLI" }
           Get-Item "dist/WlasneAI.exe" | Format-List Name,Length,LastWriteTime
+          Get-Item "dist/desktop/app/opencode.exe" | Format-List Name,Length,LastWriteTime
       - name: Upload Windows executable
         uses: actions/upload-artifact@v4
         with:
           name: WlasneAI-Windows-x64
           path: dist/WlasneAI.exe
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload OpenCode Electron desktop with WlasneAI sidecar
+        uses: actions/upload-artifact@v4
+        with:
+          name: WlasneAI-OpenCode-Electron-Windows-x64
+          path: upstream/opencode/dist/desktop/app
           if-no-files-found: error
           retention-days: 30
       - name: Publish executable to GitHub Releases

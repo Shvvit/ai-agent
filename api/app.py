@@ -24,7 +24,7 @@ from tools.file_manager import FileManager
 from tools.tool_executor import ToolExecutor
 
 
-APP_VERSION = "0.1.0"
+APP_VERSION = os.getenv("WLASNEAI_OPENCODE_VERSION", "0.1.0")
 
 
 def _data_dir() -> Path:
