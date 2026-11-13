@@ -326,7 +326,7 @@ class MainWindow(QMainWindow):
         self.settings_button.clicked.connect(self._open_settings)
         side.addWidget(self.settings_button)
 
-        splitter.addWidget(side)
+        splitter.addWidget(sidebar)
 
         # Main conversation area.
         main = QWidget()
