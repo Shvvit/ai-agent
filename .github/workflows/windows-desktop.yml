@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - feature/agent-zero-integration
-      - feature/opencode-native-ui
     paths:
       - "apps/desktop/**"
+      - "api/**"
+      - "upstream/opencode"
+      - ".gitmodules"
       - "tests/**"
       - "README.md"
       - "agents/**"
@@ -33,6 +35,18 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Set up Bun for upstream OpenCode UI
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - name: Install pinned OpenCode workspace
+        working-directory: upstream/opencode
+        run: bun install --frozen-lockfile
+      - name: Build original OpenCode desktop renderer
+        working-directory: upstream/opencode
+        run: bun run --cwd packages/desktop build
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
