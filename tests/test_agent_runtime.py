@@ -57,3 +57,31 @@ def test_legacy_generate_only_model_still_works():
 
     agent = BaseAgent(model=LegacyModel())
     assert agent.run("Cześć") == "legacy-answer"
+
+
+
+def test_base_agent_uses_approval_aware_tool_executor():
+    from tools.registry import ToolDefinition, ToolRegistry
+    from tools.tool_executor import ToolExecutor
+
+    registry = ToolRegistry()
+    registry.register(ToolDefinition(
+        name="confirm_action",
+        description="A protected action",
+        parameters={"type": "object", "properties": {}, "additionalProperties": False},
+        handler=lambda args: "approved-action-ran",
+        requires_approval=True,
+    ))
+    decisions = []
+    executor = ToolExecutor(
+        registry=registry,
+        granted_capabilities=set(),
+        approval_callback=lambda name, args: decisions.append(name) or True,
+    )
+    model = FakeChatModel([
+        ChatResult(tool_calls=[ToolCall("confirm_action", {}, "call_approval")]),
+        ChatResult(content="Akcja wykonana po zgodzie."),
+    ])
+    agent = BaseAgent(model=model, tools=executor)
+    assert agent.run("Wykonaj chronioną akcję") == "Akcja wykonana po zgodzie."
+    assert decisions == ["confirm_action"]
