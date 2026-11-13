@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -113,6 +114,29 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
             "vcs": "git", "time": {"created": 0, "updated": 0},
             "sandboxes": [], "name": "WlasneAI",
         }]
+
+    @app.get("/api/project")
+    async def opencode_projects():
+        now = int(time.time())
+        return [{
+            "id": "wlasneai",
+            "canonical": str(workspace),
+            "name": "WlasneAI",
+            "time": {"created": now, "updated": now, "active": now},
+            "sandboxes": [],
+        }]
+
+    @app.get("/api/location")
+    async def opencode_location():
+        directory = str(workspace)
+        return {
+            "directory": directory,
+            "project": {
+                "id": "wlasneai",
+                "directory": directory,
+                "canonical": directory,
+            },
+        }
 
     @app.get("/path")
     async def path_info():

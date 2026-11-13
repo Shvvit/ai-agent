@@ -45,6 +45,30 @@ def test_opencode_server_info_contract(tmp_path):
     assert payload["paths"] == {"tmp": str(tmp_path / "tmp")}
 
 
+def test_opencode_project_and_location_contract(tmp_path):
+    app = create_app(tmp_path)
+    with TestClient(app) as client:
+        projects = client.get("/api/project")
+        location = client.get("/api/location")
+
+    assert projects.status_code == 200
+    project = projects.json()[0]
+    assert project["id"] == "wlasneai"
+    assert project["canonical"] == str(tmp_path / "workspace")
+    assert set(project["time"]) == {"created", "updated", "active"}
+    assert isinstance(project["sandboxes"], list)
+
+    assert location.status_code == 200
+    assert location.json() == {
+        "directory": str(tmp_path / "workspace"),
+        "project": {
+            "id": "wlasneai",
+            "directory": str(tmp_path / "workspace"),
+            "canonical": str(tmp_path / "workspace"),
+        },
+    }
+
+
 def test_message_endpoint_rejects_unknown_session(tmp_path):
     app = create_app(tmp_path)
     with TestClient(app) as client:

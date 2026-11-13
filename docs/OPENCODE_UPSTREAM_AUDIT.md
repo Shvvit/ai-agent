@@ -65,7 +65,7 @@ This confirms the intended integration direction: package WlasneAI's Python proc
 
 The current `api/app.py` is a useful smoke-test bridge, not yet an OpenCode-compatible server. The original desktop uses the generated client from `packages/client` and calls a much broader typed API. In particular:
 
-- Health checks use `GET /server` (the generated `server.info` operation), so `GET /global/health` alone cannot make the desktop consider the bridge healthy.
+- Health checks use the generated `server.info` operation at `GET /api/info` in pinned commit `f6e0c2d0833ffe772035f221fed923e1cd5fb408`; `GET /global/health` alone cannot make the desktop consider the bridge healthy.
 - The UI's message submission path is based on the generated session prompt/message operations and typed response/event contracts; the current synchronous `POST /session/{id}/message` implementation is not yet proven compatible.
 - The renderer consumes a live event stream and session lifecycle events. The current SSE endpoint emits only `server.connected` once and does not publish message/session updates.
 - Provider/model and agent responses must match the exact generated schemas, not just be plausible JSON with similar field names.
@@ -80,3 +80,13 @@ The current `api/app.py` is a useful smoke-test bridge, not yet an OpenCode-comp
 5. Expand API coverage for tools, files, permissions, cancellation, and other UI features only after the boot + chat flow passes end-to-end tests.
 
 Do not treat the existing Windows build as proof of UI compatibility: it currently proves only that the upstream desktop workspace can be built in CI.
+
+### Verified API implementation progress
+
+The pinned protocol source was rechecked at `f6e0c2d0833ffe772035f221fed923e1cd5fb408`. The bridge now implements these exact initial desktop contracts:
+
+- `GET /api/info` (`server.info`): version, process id, URL list, and temporary path.
+- `GET /api/project` (`project.list`): project id, canonical path, timestamps, and sandbox list.
+- `GET /api/location` (`location.get`): resolved directory and project identity.
+
+The corresponding API tests assert the required response fields and values. These endpoints cover only server readiness and initial project/location discovery. Config, provider/model data, session list/create/get, and event streaming still need to match the pinned `/api/...` protocol before the UI can boot into a usable chat flow.
