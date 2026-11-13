@@ -32,6 +32,19 @@ def test_health_and_session_lifecycle(tmp_path):
         assert client.get(f"/session/{session['id']}").status_code == 404
 
 
+def test_opencode_server_info_contract(tmp_path):
+    app = create_app(tmp_path)
+    with TestClient(app, base_url="http://127.0.0.1:43123") as client:
+        response = client.get("/api/info")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["version"] == "0.1.0"
+    assert isinstance(payload["pid"], int) and payload["pid"] > 0
+    assert payload["urls"] == ["http://127.0.0.1:43123"]
+    assert payload["paths"] == {"tmp": str(tmp_path / "tmp")}
+
+
 def test_message_endpoint_rejects_unknown_session(tmp_path):
     app = create_app(tmp_path)
     with TestClient(app) as client:

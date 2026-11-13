@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
@@ -67,6 +67,8 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
     root.mkdir(parents=True, exist_ok=True)
     workspace = root / "workspace"
     workspace.mkdir(parents=True, exist_ok=True)
+    temporary = root / "tmp"
+    temporary.mkdir(parents=True, exist_ok=True)
     repository = SessionRepository(root / "opencode-sessions.sqlite3", workspace)
     memory = MemoryManager(root / "memory.sqlite3")
 
@@ -93,6 +95,16 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
     @app.get("/global/health")
     async def health():
         return {"healthy": True, "version": APP_VERSION, "backend": "wlasneai"}
+
+    @app.get("/api/info")
+    async def server_info(request: Request):
+        """Implement the pinned OpenCode server.info readiness contract."""
+        return {
+            "version": APP_VERSION,
+            "pid": os.getpid(),
+            "urls": [str(request.base_url).rstrip("/")],
+            "paths": {"tmp": str(temporary)},
+        }
 
     @app.get("/project")
     async def projects():
