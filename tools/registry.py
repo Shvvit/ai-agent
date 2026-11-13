@@ -74,7 +74,7 @@ class ToolRegistry:
             "object": lambda item: isinstance(item, dict),
             "array": lambda item: isinstance(item, list),
             "integer": lambda item: type(item) is int,
-            "number": lambda item: type(item) in {int, float} and math.isfinite(item),
+            "number": lambda item: type(item) in {int, float},
             "boolean": lambda item: isinstance(item, bool),
         }
         if expected in validators and not validators[expected](value):
