@@ -51,3 +51,17 @@ def test_message_endpoint_rejects_empty_prompt(tmp_path):
             json={"parts": [{"type": "text", "text": "  "}]},
         )
         assert response.status_code == 400
+
+def test_embedded_bridge_starts_on_loopback_and_stops(tmp_path, monkeypatch):
+    from api import server
+
+    monkeypatch.setattr(server, "create_app", lambda: create_app(tmp_path))
+    bridge = server.start_bridge(timeout=5)
+    try:
+        assert bridge.host == "127.0.0.1"
+        assert bridge.port > 0
+        assert bridge.base_url.startswith("http://127.0.0.1:")
+        assert __import__("os").environ["OPENCODE_SERVER_URL"] == bridge.base_url
+    finally:
+        bridge.stop()
+    assert not bridge.thread.is_alive()
