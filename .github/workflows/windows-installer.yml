@@ -1,0 +1,42 @@
+name: Windows installer
+
+on:
+  push:
+    branches: ["work/**"]
+  pull_request:
+    branches: ["master"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-installer:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --yes --no-progress
+
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $compiler)) {
+            $compiler = "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+          }
+          if (-not (Test-Path $compiler)) { throw "Nie znaleziono kompilatora Inno Setup." }
+          & $compiler "installer\setup.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Kompilacja instalatora nie powiodła się." }
+          if (-not (Test-Path "dist\Setup-WlasneAI.exe")) { throw "Nie utworzono pliku EXE." }
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WlasneAI-Windows-Installer
+          path: dist/Setup-WlasneAI.exe
+          if-no-files-found: error
+          retention-days: 30
