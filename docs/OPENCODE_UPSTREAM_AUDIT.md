@@ -41,4 +41,8 @@ The upstream UI expects OpenCode's server/client contracts and capabilities. Wla
 
 ## Current state
 
-This commit records the source audit and upstream license only. It does not claim that the upstream UI has already been imported or that an integrated installer exists. The next code milestone is importing the upstream workspace in a buildable, pinned form.
+The full upstream repository is now attached as a Git submodule at `upstream/opencode`, pinned to `f6e0c2d0833ffe772035f221fed923e1cd5fb408`. The root `.gitmodules` file preserves the existing Agent Zero submodule and adds the OpenCode source. The upstream MIT license is also copied to `vendor/opencode/LICENSE` with attribution notes.
+
+This makes the complete original OpenCode UI and desktop source available in the WlasneAI repository without flattening or losing upstream history. It is a source import, not yet a working WlasneAI desktop integration: the Python compatibility service, Electron sidecar lifecycle, WlasneAI-specific UI adaptations, and combined Windows packaging remain to be implemented and tested.
+
+The next code milestone is to make the pinned upstream desktop workspace build reproducibly on Windows CI, then implement the Python compatibility bridge against the exact pinned API contracts.
