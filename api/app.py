@@ -100,7 +100,7 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
     async def projects():
         return [{
             "id": "wlasneai", "worktree": str(workspace),
-            " vcs": "git", "time": {"created": 0, "updated": 0},
+            "vcs": "git", "time": {"created": 0, "updated": 0},
             "sandboxes": [], "name": "WlasneAI",
         }]
 
