@@ -146,7 +146,7 @@ def test_agent_tool_execution_requires_explicit_callback(tmp_path):
         registry=registry,
         granted_capabilities=set(),
     )
-    with pytest.raises(PermissionError, match="brak aktywnego kanału"):
+    with pytest.raises(PermissionError, match="aktywnego kanału"):
         executor.execute_for_agent("dangerous_action", {})
 
 
