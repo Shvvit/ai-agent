@@ -1,8 +1,7 @@
 diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
 --- a/packages/desktop/src/main/index.ts
 +++ b/packages/desktop/src/main/index.ts
-@@ -12,6 +12,12 @@ import { registerRendererScheme } from "./windows/scheme"
- 
+@@ -15,3 +15,9 @@
  configureApplication()
  
 +// Keep the WlasneAI sidecar registry separate from an independently installed OpenCode service.
@@ -12,5 +11,3 @@ diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/inde
 +}
 +
  if (acquireApplicationLock()) {
-   registerRendererScheme()
-   // Window first, then the bundle: starting the import before ready delays ready itself, because the
