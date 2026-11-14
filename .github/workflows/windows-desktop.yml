@@ -118,6 +118,11 @@ jobs:
           $env:WLASNEAI_STATE_HOME = Join-Path $env:RUNNER_TEMP "wlasneai-electron-state"
           $env:APPDATA = Join-Path $env:RUNNER_TEMP "wlasneai-electron-appdata"
           $env:ELECTRON_ENABLE_LOGGING = "1"
+          $env:AI_PROVIDER = "openai_compatible"
+          $env:AI_MODEL = "wlasneai-e2e"
+          $env:AI_BASE_URL = "http://127.0.0.1:43177/v1"
+          $env:AI_API_KEY = "wlasneai-e2e-key"
+          $env:WLASNEAI_E2E_PROVIDER_PORT = "43177"
           $registrationPaths = @(
             (Join-Path $env:WLASNEAI_STATE_HOME "opencode/service.json"),
             (Join-Path $env:APPDATA "ai.opencode.desktop.dev/opencode/service.json"),
@@ -125,11 +130,26 @@ jobs:
           ) | Select-Object -Unique
           $stdoutPath = Join-Path $env:RUNNER_TEMP "wlasneai-electron.stdout.log"
           $stderrPath = Join-Path $env:RUNNER_TEMP "wlasneai-electron.stderr.log"
+          $providerStdoutPath = Join-Path $env:RUNNER_TEMP "wlasneai-provider.stdout.log"
+          $providerStderrPath = Join-Path $env:RUNNER_TEMP "wlasneai-provider.stderr.log"
           Remove-Item -LiteralPath $env:WLASNEAI_STATE_HOME -Recurse -Force -ErrorAction SilentlyContinue
-          $appPath = "upstream/opencode/dist/desktop/app/OpenCode Dev.exe"
-          $process = Start-Process -FilePath $appPath -ArgumentList @("--disable-gpu", "--no-sandbox") -PassThru -WindowStyle Hidden -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
-          $registration = $null
+          $provider = Start-Process -FilePath "python" -ArgumentList @("tests/mock_openai_server.py") -PassThru -WindowStyle Hidden -RedirectStandardOutput $providerStdoutPath -RedirectStandardError $providerStderrPath
+          $process = $null
           try {
+            $providerReady = $false
+            $providerDeadline = (Get-Date).AddSeconds(15)
+            while ((Get-Date) -lt $providerDeadline) {
+              if ($provider.HasExited) { throw "Local model provider exited early with code $($provider.ExitCode)" }
+              try {
+                $providerHealth = Invoke-RestMethod -Uri "http://127.0.0.1:43177/health" -TimeoutSec 2
+                if ($providerHealth.healthy) { $providerReady = $true; break }
+              } catch { }
+              Start-Sleep -Milliseconds 250
+            }
+            if (!$providerReady) { throw "Local model provider did not become ready" }
+            $appPath = "upstream/opencode/dist/desktop/app/OpenCode Dev.exe"
+            $process = Start-Process -FilePath $appPath -ArgumentList @("--disable-gpu", "--no-sandbox", "--remote-debugging-port=9223") -PassThru -WindowStyle Hidden -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+            $registration = $null
             $deadline = (Get-Date).AddSeconds(90)
             while ((Get-Date) -lt $deadline) {
               if ($process.HasExited) { throw "Electron exited early with code $($process.ExitCode)" }
@@ -163,10 +183,19 @@ jobs:
               if (!$connected) { Start-Sleep -Milliseconds 500 }
             }
             if (!$connected) { throw "Electron did not confirm its authenticated WlasneAI service connection" }
+            Push-Location upstream/opencode/packages/app
+            try {
+              & bun ../../../../tests/electron_ui_smoke.mjs
+              if ($LASTEXITCODE -ne 0) { throw "Original Electron UI did not complete a WlasneAI chat round trip" }
+            }
+            finally {
+              Pop-Location
+            }
           }
           finally {
             if ($registration -and $registration.pid -gt 0) { & taskkill.exe /PID $registration.pid /T /F | Out-Null }
-            if (!$process.HasExited) { & taskkill.exe /PID $process.Id /T /F | Out-Null; $process.WaitForExit(10000) }
+            if ($process -and !$process.HasExited) { & taskkill.exe /PID $process.Id /T /F | Out-Null; $process.WaitForExit(10000) }
+            if ($provider -and !$provider.HasExited) { & taskkill.exe /PID $provider.Id /T /F | Out-Null; $provider.WaitForExit(10000) }
             $logRoots = @($env:APPDATA, (Join-Path $env:USERPROFILE "AppData/Roaming")) | Select-Object -Unique
             foreach ($logRoot in $logRoots) {
               if (Test-Path -LiteralPath $logRoot) {
@@ -175,6 +204,8 @@ jobs:
             }
             if (Test-Path -LiteralPath $stdoutPath) { Get-Content -LiteralPath $stdoutPath -Tail 100 }
             if (Test-Path -LiteralPath $stderrPath) { Get-Content -LiteralPath $stderrPath -Tail 100 }
+            if (Test-Path -LiteralPath $providerStdoutPath) { Get-Content -LiteralPath $providerStdoutPath -Tail 100 }
+            if (Test-Path -LiteralPath $providerStderrPath) { Get-Content -LiteralPath $providerStderrPath -Tail 100 }
           }
       - name: Verify executable exists
         shell: pwsh

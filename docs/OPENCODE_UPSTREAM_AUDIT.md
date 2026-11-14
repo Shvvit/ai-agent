@@ -101,4 +101,10 @@ The corresponding API tests assert the required response fields and values. This
 - The packaged Python process starts only on loopback, registers `id`, `version`, `url`, `pid`, and a random password in the service file expected by the pinned client, and serves the API with HTTP Basic Auth.
 - Windows CI has passed Python tests, both executable builds, direct sidecar registration/readiness, and Electron package verification.
 - A later CI launch confirmed that Electron staged `opencode-cli.exe`, started the WlasneAI service, and logged `v2 CLI background service ready`. Its test initially looked in the wrong registry location. Upstream `preferApplicationEnvironment` clears `XDG_STATE_HOME` on Windows, so the pinned-source patch now re-establishes the WlasneAI-only registry both before the early probe and in `BackgroundService.prepare` after environment setup.
-- Fresh Windows CI still needs to confirm the corrected registry path and log assertion. A UI-driven chat round trip remains an acceptance gate; integration is not complete yet.
+- The Windows CI run on `58b0885a50e177a8cafbd1b71d3ae50a4508aa67` confirmed the corrected registry path and authenticated connection log. A UI-driven chat round trip remains an acceptance gate; integration is not complete yet.
+
+## UI-driven sidecar test added (2026-11-14)
+
+- The Windows Electron smoke step now starts a local OpenAI-compatible test server, configures the WlasneAI sidecar to use it, and enables Chromium DevTools Protocol on the packaged development-channel app.
+- A Playwright script attaches to the running original renderer, submits a prompt through the real composer, and waits for the matching WlasneAI response in the transcript. The mock provider returns the submitted text, so the test is deterministic and does not use Ollama or external credentials.
+- This test is a stronger acceptance check than process startup and `/api/info` readiness, but it still needs a successful run in GitHub Actions before the UI chat round trip is verified.
