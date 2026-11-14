@@ -11,3 +11,18 @@ diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/inde
 +}
 +
  if (acquireApplicationLock()) {
+diff --git a/packages/desktop/src/main/service/background-service.ts b/packages/desktop/src/main/service/background-service.ts
+--- a/packages/desktop/src/main/service/background-service.ts
++++ b/packages/desktop/src/main/service/background-service.ts
+@@ -104,6 +104,10 @@ const prepare = Effect.fn("BackgroundService.prepare")(function* (mode: BackgroundServiceMachine.ConnectMode) {
+   const isolated = !app.isPackaged && process.env.OPENCODE_DESKTOP_ISOLATED_SERVER === "1"
+   const cli = yield* desktopCli.resolve
+   const version = serviceVersion({ channel: CHANNEL, isolated, mode, version: cli.version })
+ 
+-  if (isolated) process.env.XDG_STATE_HOME = app.getPath("userData")
++  if (app.isPackaged) {
++    process.env.XDG_STATE_HOME = process.env.WLASNEAI_STATE_HOME ?? app.getPath("userData")
++  } else if (isolated) {
++    process.env.XDG_STATE_HOME = app.getPath("userData")
++  }
+   const client = yield* Effect.promise(() => import("@opencode/client/service"))

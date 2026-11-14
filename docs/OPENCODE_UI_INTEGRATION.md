@@ -1,6 +1,6 @@
 # OpenCode UI integration plan
 
-Status (2026-11-14): implementation in progress. The pinned OpenCode desktop is built in Windows CI and now bundles the WlasneAI Python sidecar. Direct sidecar startup and readiness are tested. Electron startup has not passed yet; see `OPENCODE_UPSTREAM_AUDIT.md` for the current failure and remaining acceptance work. PySide6 remains the rollback app.
+Status (2026-11-14): implementation in progress. The pinned OpenCode desktop is built in Windows CI and bundles the WlasneAI Python sidecar. Electron started the sidecar and logged a successful authenticated connection; the Windows smoke-test currently fails because it looked in the wrong state directory, which is being corrected. A UI-driven chat round trip is still unverified. PySide6 remains the rollback app.
 
 ## Goal
 
