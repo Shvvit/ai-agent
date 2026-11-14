@@ -44,6 +44,11 @@ jobs:
       - name: Install pinned OpenCode workspace
         working-directory: upstream/opencode
         run: bun install --frozen-lockfile
+      - name: Isolate packaged desktop state for WlasneAI
+        working-directory: upstream/opencode
+        run: |
+          git apply --check ../../patches/opencode-wlasneai-state.patch
+          git apply ../../patches/opencode-wlasneai-state.patch
       - name: Build original OpenCode desktop renderer
         working-directory: upstream/opencode
         run: bun run --cwd packages/desktop build
@@ -91,7 +96,9 @@ jobs:
             if (!$registration) { throw "Sidecar did not publish its service registration" }
             if ($registration.pid -le 0) { throw "Registration PID is invalid" }
             if ($registration.version -ne "2.3.0") { throw "Registration version does not match pinned OpenCode" }
-            $info = Invoke-RestMethod -Uri "$($registration.url)/api/info" -TimeoutSec 10
+            if (!$registration.password) { throw "Sidecar did not register its required Basic Auth password" }
+            $credential = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("opencode:$($registration.password)"))
+            $info = Invoke-RestMethod -Uri "$($registration.url)/api/info" -Headers @{ Authorization = "Basic $credential" } -TimeoutSec 10
             if ($info.pid -ne $registration.pid -or $info.version -ne "2.3.0") { throw "Sidecar readiness response does not match registration" }
           }
           finally {
@@ -107,13 +114,13 @@ jobs:
       - name: Smoke-test Electron startup and sidecar connection
         shell: pwsh
         run: |
-          $env:XDG_STATE_HOME = Join-Path $env:RUNNER_TEMP "wlasneai-electron-state"
+          $env:WLASNEAI_STATE_HOME = Join-Path $env:RUNNER_TEMP "wlasneai-electron-state"
           $env:APPDATA = Join-Path $env:RUNNER_TEMP "wlasneai-electron-appdata"
           $env:ELECTRON_ENABLE_LOGGING = "1"
-          $registrationPath = Join-Path $env:XDG_STATE_HOME "opencode/service.json"
+          $registrationPath = Join-Path $env:WLASNEAI_STATE_HOME "opencode/service.json"
           $stdoutPath = Join-Path $env:RUNNER_TEMP "wlasneai-electron.stdout.log"
           $stderrPath = Join-Path $env:RUNNER_TEMP "wlasneai-electron.stderr.log"
-          Remove-Item -LiteralPath $env:XDG_STATE_HOME -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath $env:WLASNEAI_STATE_HOME -Recurse -Force -ErrorAction SilentlyContinue
           $appPath = "upstream/opencode/dist/desktop/app/OpenCode Dev.exe"
           $process = Start-Process -FilePath $appPath -ArgumentList @("--disable-gpu", "--no-sandbox") -PassThru -WindowStyle Hidden -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
           $registration = $null
@@ -129,14 +136,32 @@ jobs:
             }
             if (!$registration) { throw "Electron did not start the WlasneAI sidecar" }
             if ($registration.version -ne "2.3.0") { throw "Electron connected to a sidecar with an unexpected version" }
-            $info = Invoke-RestMethod -Uri "$($registration.url)/api/info" -TimeoutSec 10
+            if (!$registration.password) { throw "Electron sidecar registration has no Basic Auth password" }
+            $credential = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("opencode:$($registration.password)"))
+            $info = Invoke-RestMethod -Uri "$($registration.url)/api/info" -Headers @{ Authorization = "Basic $credential" } -TimeoutSec 10
             if ($info.pid -ne $registration.pid -or $info.version -ne "2.3.0") { throw "Electron sidecar readiness check failed" }
+            $connected = $false
+            $connectDeadline = (Get-Date).AddSeconds(30)
+            while ((Get-Date) -lt $connectDeadline -and !$connected) {
+              $logRoots = @($env:APPDATA, (Join-Path $env:USERPROFILE "AppData/Roaming")) | Select-Object -Unique
+              foreach ($logRoot in $logRoots) {
+                if (Test-Path -LiteralPath $logRoot) {
+                  $connected = [bool](Get-ChildItem -LiteralPath $logRoot -Filter "main.log" -File -Recurse -ErrorAction SilentlyContinue | Select-String -SimpleMatch "v2 CLI background service ready" -Quiet)
+                  if ($connected) { break }
+                }
+              }
+              if (!$connected) { Start-Sleep -Milliseconds 500 }
+            }
+            if (!$connected) { throw "Electron did not confirm its authenticated WlasneAI service connection" }
           }
           finally {
             if ($registration -and $registration.pid -gt 0) { & taskkill.exe /PID $registration.pid /T /F | Out-Null }
             if (!$process.HasExited) { & taskkill.exe /PID $process.Id /T /F | Out-Null; $process.WaitForExit(10000) }
-            if (Test-Path -LiteralPath $env:APPDATA) {
-              Get-ChildItem -LiteralPath $env:APPDATA -Filter "main.log" -File -Recurse -ErrorAction SilentlyContinue | ForEach-Object { Get-Content -LiteralPath $_.FullName -Tail 200 }
+            $logRoots = @($env:APPDATA, (Join-Path $env:USERPROFILE "AppData/Roaming")) | Select-Object -Unique
+            foreach ($logRoot in $logRoots) {
+              if (Test-Path -LiteralPath $logRoot) {
+                Get-ChildItem -LiteralPath $logRoot -Filter "main.log" -File -Recurse -ErrorAction SilentlyContinue | ForEach-Object { Get-Content -LiteralPath $_.FullName -Tail 200 }
+              }
             }
             if (Test-Path -LiteralPath $stdoutPath) { Get-Content -LiteralPath $stdoutPath -Tail 100 }
             if (Test-Path -LiteralPath $stderrPath) { Get-Content -LiteralPath $stderrPath -Tail 100 }

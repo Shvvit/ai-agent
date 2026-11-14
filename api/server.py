@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 import uvicorn
 
+from api.auth import SidecarBasicAuthMiddleware
 from api.app import create_app
 
 
@@ -33,10 +34,18 @@ def _free_port(host: str) -> int:
         return int(sock.getsockname()[1])
 
 
-def start_bridge(host: str = "127.0.0.1", port: int | None = None, timeout: float = 10.0) -> BridgeServer:
+def start_bridge(
+    host: str = "127.0.0.1",
+    port: int | None = None,
+    timeout: float = 10.0,
+    password: str | None = None,
+) -> BridgeServer:
     """Start the API on loopback only and wait until it accepts connections."""
     selected_port = port or _free_port(host)
-    config = uvicorn.Config(create_app(), host=host, port=selected_port, log_level="warning", access_log=False)
+    app = create_app()
+    if password:
+        app.add_middleware(SidecarBasicAuthMiddleware, password=password)
+    config = uvicorn.Config(app, host=host, port=selected_port, log_level="warning", access_log=False)
     server = uvicorn.Server(config)
     thread = threading.Thread(target=server.run, name="wlasneai-api", daemon=True)
     thread.start()

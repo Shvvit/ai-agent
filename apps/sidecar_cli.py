@@ -3,10 +3,12 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
 import signal
 import sys
 import tempfile
 import time
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -23,9 +25,23 @@ def registration_path(env: dict[str, str] | None = None, home: Path | None = Non
     return root / "opencode" / "service.json"
 
 
-def write_registration(path: Path, *, pid: int, url: str, version: str = SIDECAR_VERSION) -> None:
+def write_registration(
+    path: Path,
+    *,
+    pid: int,
+    url: str,
+    password: str,
+    version: str = SIDECAR_VERSION,
+    service_id: str | None = None,
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {"version": version, "url": url, "pid": pid}
+    payload = {
+        "id": service_id or uuid.uuid4().hex,
+        "version": version,
+        "url": url,
+        "pid": pid,
+        "password": password,
+    }
     fd, temp_name = tempfile.mkstemp(prefix="service-", suffix=".tmp", dir=path.parent)
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as stream:
@@ -61,9 +77,10 @@ def main(argv: list[str] | None = None) -> int:
     os.environ["WLASNEAI_OPENCODE_VERSION"] = SIDECAR_VERSION
     from api.server import start_bridge
 
-    bridge = start_bridge(host="127.0.0.1", port=0)
+    password = secrets.token_urlsafe(32)
+    bridge = start_bridge(host="127.0.0.1", port=0, password=password)
     registration = registration_path()
-    write_registration(registration, pid=os.getpid(), url=bridge.base_url)
+    write_registration(registration, pid=os.getpid(), url=bridge.base_url, password=password)
     stopping = False
 
     def stop(_signum: int, _frame: Any) -> None:

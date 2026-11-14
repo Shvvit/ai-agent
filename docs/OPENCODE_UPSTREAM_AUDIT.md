@@ -94,3 +94,11 @@ The pinned protocol source was rechecked at `f6e0c2d0833ffe772035f221fed923e1cd5
 - `GET /api/config`, `/api/agent`, `/api/command`, `/api/provider`, `/api/model`, and `/api/model/default`: location-scoped boot catalog responses.
 
 The corresponding API tests assert the required response fields and values. This covers server readiness, project/location discovery, initial catalogs, and a text-only session/prompt flow. File attachments, tool event mapping, provider-driven model streaming, and real Electron sidecar startup remain unimplemented, so the UI integration is still incomplete.
+
+## Sidecar packaging and runtime progress (2026-11-14)
+
+- The Windows workflow builds the original pinned OpenCode desktop and packages `apps/sidecar_cli.py` as its `opencode-cli.exe`, while preserving the existing PySide6 executable as a separate rollback artifact.
+- The packaged Python process starts only on loopback, registers `id`, `version`, `url`, `pid`, and a random password in the service file expected by the pinned client, and serves the API with HTTP Basic Auth.
+- Windows CI has passed Python tests, both executable builds, direct sidecar registration/readiness, and Electron package verification.
+- A CI launch of `OpenCode Dev.exe` did not write a sidecar registration within 90 seconds. The pinned source uses the default OpenCode service registry, which would allow adopting a separately installed OpenCode agent service. A pinned-source patch is now applied during the build so the packaged WlasneAI desktop uses its own application state directory.
+- The latest auth and registry-isolation changes still require a successful fresh Windows run. A successful Electron startup and a UI-driven chat round trip remain acceptance gates; integration is not complete yet.
