@@ -1,6 +1,6 @@
 # OpenCode UI integration plan
 
-Status (2026-11-14): implementation in progress. The pinned OpenCode desktop is built in Windows CI and bundles the WlasneAI Python sidecar. Windows CI now confirms Electron starts and authenticates with the sidecar using an isolated service registry. A Playwright smoke test is being added to send a prompt through the original UI and verify the reply rendered from WlasneAI; that end-to-end check has not run yet. PySide6 remains the rollback app.
+Status (2026-11-14): implementation in progress. The pinned OpenCode desktop is built in Windows CI and bundles the WlasneAI Python sidecar. Windows CI confirms Electron starts and authenticates with the sidecar using an isolated service registry. The first Playwright UI run reached the original renderer but showed an initialization error before the chat composer appeared; API response and renderer error diagnostics are being added before changing the bridge. A WlasneAI chat round trip is not yet verified. PySide6 remains the rollback app.
 
 ## Goal
 
