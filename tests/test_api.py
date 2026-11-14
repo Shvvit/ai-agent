@@ -109,7 +109,7 @@ def test_opencode_agent_provider_model_and_boot_catalog_contract(tmp_path, monke
         models = client.get("/api/model").json()
         default_model = client.get("/api/model/default").json()
 
-    assert config == {"location": {"directory": directory}, "data": []}
+    assert config == []
     assert commands == {"location": {"directory": directory}, "data": []}
     assert agents["location"]["directory"] == directory
     assert agents["data"][0]["id"] == "wlasneai"

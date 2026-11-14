@@ -232,7 +232,10 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
 
     @app.get("/api/config")
     async def opencode_config():
-        return {"location": {"directory": str(workspace)}, "data": []}
+        # The pinned server contract returns Config.Entry[] directly here, not a
+        # Location.response envelope. The renderer calls Array.findLast on it
+        # while creating the composer, so returning an envelope crashes startup.
+        return []
 
     @app.get("/api/agent")
     async def opencode_agents():

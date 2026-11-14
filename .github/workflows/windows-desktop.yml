@@ -183,6 +183,8 @@ jobs:
               if (!$connected) { Start-Sleep -Milliseconds 500 }
             }
             if (!$connected) { throw "Electron did not confirm its authenticated WlasneAI service connection" }
+            $updateChecks = Get-ChildItem -LiteralPath $env:APPDATA -Filter "main.log" -File -Recurse -ErrorAction SilentlyContinue | Select-String -SimpleMatch "Checking for update"
+            if ($updateChecks) { throw "WlasneAI Electron attempted to check for upstream OpenCode updates" }
             Push-Location upstream/opencode/packages/app
             try {
               & bun ../../../../tests/electron_ui_smoke.mjs
