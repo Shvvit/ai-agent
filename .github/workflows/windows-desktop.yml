@@ -118,7 +118,11 @@ jobs:
           $env:WLASNEAI_STATE_HOME = Join-Path $env:RUNNER_TEMP "wlasneai-electron-state"
           $env:APPDATA = Join-Path $env:RUNNER_TEMP "wlasneai-electron-appdata"
           $env:ELECTRON_ENABLE_LOGGING = "1"
-          $registrationPath = Join-Path $env:WLASNEAI_STATE_HOME "opencode/service.json"
+          $registrationPaths = @(
+            (Join-Path $env:WLASNEAI_STATE_HOME "opencode/service.json"),
+            (Join-Path $env:APPDATA "ai.opencode.desktop.dev/opencode/service.json"),
+            (Join-Path $env:USERPROFILE "AppData/Roaming/ai.opencode.desktop.dev/opencode/service.json")
+          ) | Select-Object -Unique
           $stdoutPath = Join-Path $env:RUNNER_TEMP "wlasneai-electron.stdout.log"
           $stderrPath = Join-Path $env:RUNNER_TEMP "wlasneai-electron.stderr.log"
           Remove-Item -LiteralPath $env:WLASNEAI_STATE_HOME -Recurse -Force -ErrorAction SilentlyContinue
@@ -129,13 +133,18 @@ jobs:
             $deadline = (Get-Date).AddSeconds(90)
             while ((Get-Date) -lt $deadline) {
               if ($process.HasExited) { throw "Electron exited early with code $($process.ExitCode)" }
-              if (Test-Path -LiteralPath $registrationPath) {
-                try { $registration = Get-Content -LiteralPath $registrationPath -Raw | ConvertFrom-Json } catch { $registration = $null }
-                if ($registration) { break }
+              foreach ($candidate in $registrationPaths) {
+                if (Test-Path -LiteralPath $candidate) {
+                  try { $registration = Get-Content -LiteralPath $candidate -Raw | ConvertFrom-Json; $registrationPath = $candidate } catch { $registration = $null }
+                  if ($registration) { break }
+                }
               }
+              if ($registration) { break }
               Start-Sleep -Milliseconds 500
             }
             if (!$registration) { throw "Electron did not start the WlasneAI sidecar" }
+            $sharedServicePath = Join-Path $env:USERPROFILE ".local/state/opencode/service.json"
+            if ($registrationPath -eq $sharedServicePath) { throw "Electron used the shared OpenCode service registry" }
             if ($registration.version -ne "2.3.0") { throw "Electron connected to a sidecar with an unexpected version" }
             if (!$registration.password) { throw "Electron sidecar registration has no Basic Auth password" }
             $credential = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("opencode:$($registration.password)"))
