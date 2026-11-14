@@ -7,7 +7,7 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -291,11 +291,25 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
 
     @app.get("/api/session")
     async def opencode_list_sessions(
-        limit: int | None = Query(default=None, ge=1, le=200),
+        limit: int | None = Query(default=None, ge=1),
+        order: Literal["asc", "desc"] = Query(default="desc"),
         directory: str | None = Query(default=None),
         project: str | None = Query(default=None),
+        search: str | None = Query(default=None),
+        parentID: str | None = Query(default=None),
+        archived: bool | None = Query(default=None),
+        subpath: str | None = Query(default=None),
     ):
         rows = repository.list()
+        if (directory is not None and directory != str(workspace)) or (project is not None and project != "wlasneai"):
+            rows = []
+        if parentID not in (None, "null") or archived is True:
+            rows = []
+        if search:
+            term = search.casefold()
+            rows = [row for row in rows if term in row["title"].casefold()]
+        if order == "asc":
+            rows = list(reversed(rows))
         if limit is not None:
             rows = rows[:limit]
         return {"data": [_opencode_session_view(row, workspace) for row in rows], "cursor": {}}

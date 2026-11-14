@@ -1,6 +1,6 @@
 # OpenCode UI integration plan
 
-Status (2026-11-14): implementation in progress. The pinned OpenCode desktop is built in Windows CI and bundles the WlasneAI Python sidecar. Windows CI confirms Electron starts and authenticates with the sidecar using an isolated service registry. Renderer diagnostics identified a malformed `GET /api/config` response that crashed composer initialization; the bridge now returns the pinned `Config.Entry[]` shape and has a regression assertion. A rerun must confirm the UI boot and full WlasneAI chat round trip. PySide6 remains the rollback app.
+Status (2026-11-14): implementation in progress. The pinned OpenCode desktop is built in Windows CI and bundles the WlasneAI Python sidecar. Windows CI confirms Electron starts and authenticates with the sidecar using an isolated service registry. The renderer now gets past composer initialization and shows the main session view. The next run revealed that the UI requests 500 sessions, while the bridge capped the response at 200 and returned 422; that query limit and contract test are now fixed. The complete chat round trip still needs a passing Windows run. PySide6 remains the rollback app.
 
 ## Goal
 

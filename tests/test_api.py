@@ -91,6 +91,9 @@ def test_opencode_session_lifecycle_contract(tmp_path):
         assert listed.status_code == 200
         assert listed.json()["data"] == [session]
         assert listed.json()["cursor"] == {}
+        listed_by_desktop = client.get("/api/session?limit=500&order=desc&parentID=null")
+        assert listed_by_desktop.status_code == 200
+        assert listed_by_desktop.json()["data"] == [session]
         assert client.get(f"/api/session/{session_id}").json()["data"] == session
         assert client.delete(f"/api/session/{session_id}").status_code == 204
         assert client.get(f"/api/session/{session_id}").status_code == 404
